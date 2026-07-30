@@ -1,0 +1,8 @@
+[
+  { "id": "und-001", "nombre": "Ventas",              "color": "#1565C0" },
+  { "id": "und-002", "nombre": "Marketing",            "color": "#7B1FA2" },
+  { "id": "und-003", "nombre": "Operaciones",          "color": "#00695C" },
+  { "id": "und-004", "nombre": "Fuerza de Ventas",     "color": "#E65100" },
+  { "id": "und-005", "nombre": "Cobranzas",            "color": "#4527A0" },
+  { "id": "und-006", "nombre": "Customer Experience",  "color": "#AD1457" }
+]

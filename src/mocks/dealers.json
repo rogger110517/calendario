@@ -1,0 +1,7 @@
+[
+  { "id": "dlr-001", "nombre": "AutoMundo Lima", "codigo": "AML-01", "region": "Lima", "activo": true },
+  { "id": "dlr-002", "nombre": "Motor Center Arequipa", "codigo": "MCA-01", "region": "Arequipa", "activo": true },
+  { "id": "dlr-003", "nombre": "Vehículos del Sur", "codigo": "VDS-01", "region": "Cusco", "activo": true },
+  { "id": "dlr-004", "nombre": "AutoPrime Trujillo", "codigo": "APT-01", "region": "Trujillo", "activo": true },
+  { "id": "dlr-005", "nombre": "Lima Motors", "codigo": "LMT-01", "region": "Lima", "activo": false }
+]

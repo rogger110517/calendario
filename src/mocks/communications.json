@@ -1,0 +1,43 @@
+[
+  {
+    "id": "com-001",
+    "campaignId": "cmp-001",
+    "nombreComunicacion": "Email Lanzamiento Sedán",
+    "canal": "Email",
+    "fechaProgramada": "2026-07-25T10:00:00.000Z",
+    "estadoEnvio": "Programado"
+  },
+  {
+    "id": "com-002",
+    "campaignId": "cmp-002",
+    "nombreComunicacion": "Email Mantenimiento Semana 1",
+    "canal": "Email",
+    "fechaProgramada": "2026-08-01T09:00:00.000Z",
+    "estadoEnvio": "Pendiente"
+  },
+  {
+    "id": "com-003",
+    "campaignId": "cmp-002",
+    "nombreComunicacion": "SMS Recordatorio Semana 2",
+    "canal": "SMS",
+    "fechaProgramada": "2026-08-08T09:00:00.000Z",
+    "estadoEnvio": "Pendiente"
+  },
+  {
+    "id": "com-004",
+    "campaignId": "cmp-002",
+    "nombreComunicacion": "WhatsApp Cierre Semana 3",
+    "canal": "WhatsApp",
+    "fechaProgramada": "2026-08-15T09:00:00.000Z",
+    "estadoEnvio": "Pendiente"
+  },
+  {
+    "id": "com-005",
+    "campaignId": "cmp-003",
+    "nombreComunicacion": "Email Black Friday Masivo",
+    "canal": "Email",
+    "fechaProgramada": "2026-07-10T08:00:00.000Z",
+    "estadoEnvio": "Enviado",
+    "fechaEnvio": "2026-07-10T08:05:32.000Z"
+  }
+]

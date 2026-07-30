@@ -1,0 +1,26 @@
+[
+  {
+    "id": "usr-001",
+    "nombre": "Ana García Ríos",
+    "correo": "ana.garcia@mafperu.com",
+    "password": "Admin.2026",
+    "rol": "admin",
+    "departamento": "Marketing"
+  },
+  {
+    "id": "usr-002",
+    "nombre": "Roberto Silva Campos",
+    "correo": "roberto.silva@mafperu.com",
+    "password": "Admin.2026",
+    "rol": "admin",
+    "departamento": "Gerencia Comercial"
+  },
+  {
+    "id": "usr-003",
+    "nombre": "Lucía Torres Vargas",
+    "correo": "lucia.torres@mafperu.com",
+    "password": "Colab.2026",
+    "rol": "editor",
+    "departamento": "Comunicaciones"
+  }
+]
