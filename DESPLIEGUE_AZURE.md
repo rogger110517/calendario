@@ -64,9 +64,13 @@ jobs:
 | `DATAVERSE_URL` | URL del entorno Dataverse |
 | `NEXT_PUBLIC_SHAREPOINT_SITE` | ID del sitio SharePoint |
 
-## Opción 2: Azure App Service
+## Opción 2: Azure App Service (recomendado — control total sobre el servidor Node.js)
 
-Para control total sobre el servidor Node.js.
+Es la opción usada actualmente para este proyecto, porque corre Next.js en modo servidor completo
+(SSR + `/api/*`). Guía paso a paso completa, con Application Settings, Deployment Center y
+verificación: **[`src/DESPLIEGUE_APP_SERVICE.md`](src/DESPLIEGUE_APP_SERVICE.md)**.
+
+Resumen rápido con Azure CLI:
 
 ```bash
 # Crear App Service plan
@@ -76,26 +80,83 @@ az appservice plan create \
   --sku B2 \
   --is-linux
 
-# Crear Web App
+# Crear Web App (runtime: Node 20 LTS)
 az webapp create \
   --name calendario-comunicaciones \
   --resource-group calendario-rg \
   --plan calendario-plan \
   --runtime "NODE:20-lts"
 
-# Configurar startup command
+# Habilitar build automático (Oryx) y comando de inicio
+az webapp config appsettings set \
+  --name calendario-comunicaciones \
+  --resource-group calendario-rg \
+  --settings SCM_DO_BUILD_DURING_DEPLOYMENT=true WEBSITE_NODE_DEFAULT_VERSION=~20
+
 az webapp config set \
   --name calendario-comunicaciones \
   --resource-group calendario-rg \
-  --startup-file "node server.js"
+  --startup-file "npm run start"
 
-# Deploy
-az webapp deploy \
+# Deploy: conectar el repo (GitHub Deployment Center o Local Git) — NO se sube
+# un zip manual. Azure instala dependencias y ejecuta "npm run build" solo.
+# Ver src/DESPLIEGUE_APP_SERVICE.md, sección 5, para el paso a paso.
+```
+
+### Verificar que quedó publicado
+
+Una vez que el Deployment Center termina el primer deploy (ver **Log stream** en el Portal
+para seguirlo en vivo), el proyecto queda disponible en:
+
+```
+https://calendario-comunicaciones.azurewebsites.net
+```
+
+(sustituye `calendario-comunicaciones` por el nombre real que le diste a la Web App). Ese es el
+link que hay que compartir/usar en producción — pruébalo abriendo login, calendario y creación
+de una campaña antes de darlo por bueno.
+
+### Secretos con Azure Key Vault (recomendado para producción)
+
+En vez de guardar `SENDGRID_API_KEY` y `DATAVERSE_URL` como texto plano en Application Settings,
+usa Key Vault + Managed Identity:
+
+```bash
+# 1. Crear el Key Vault
+az keyvault create \
+  --name calendario-kv \
+  --resource-group calendario-rg \
+  --location eastus
+
+# 2. Guardar los secretos ahí (no en el repo, no en Application Settings en texto plano)
+az keyvault secret set --vault-name calendario-kv --name SendgridApiKey  --value "<tu-api-key>"
+az keyvault secret set --vault-name calendario-kv --name DataverseUrl   --value "<tu-url>"
+
+# 3. Activar identidad administrada en la Web App
+az webapp identity assign \
+  --name calendario-comunicaciones \
+  --resource-group calendario-rg
+
+# 4. Darle permiso de lectura de secretos a esa identidad (usa el principalId que devuelve el paso 3)
+az keyvault set-policy \
+  --name calendario-kv \
+  --object-id <principalId-del-paso-3> \
+  --secret-permissions get list
+
+# 5. Referenciar el secreto desde Application Settings (la Web App lo resuelve solo)
+az webapp config appsettings set \
   --name calendario-comunicaciones \
   --resource-group calendario-rg \
-  --src-path ./dist.zip \
-  --type zip
+  --settings SENDGRID_API_KEY="@Microsoft.KeyVault(SecretUri=https://calendario-kv.vault.azure.net/secrets/SendgridApiKey/)" \
+             DATAVERSE_URL="@Microsoft.KeyVault(SecretUri=https://calendario-kv.vault.azure.net/secrets/DataverseUrl/)"
 ```
+
+**Importante:** las referencias `@Microsoft.KeyVault(...)` solo se resuelven cuando el proceso
+del sitio arranca (runtime) — úsalas solo para variables que el código lee en tiempo de ejecución,
+como `SENDGRID_API_KEY` (usada dentro de `src/lib/services/email.service.ts` / la API Route).
+**No** las uses para las variables `NEXT_PUBLIC_*`: Next.js las incrusta en el bundle del
+navegador durante `npm run build`, así que esas deben seguir siendo Application Settings normales
+(en texto plano dentro de Azure, nunca en el repo) para que estén disponibles durante el build.
 
 ## Opción 3: Azure Container Apps
 

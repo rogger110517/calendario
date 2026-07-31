@@ -52,6 +52,12 @@ En **Azure Portal → tu Web App → Configuration → Application settings**, a
 | `DATAVERSE_URL` | URL del entorno Dataverse |
 | `NEXT_PUBLIC_SHAREPOINT_SITE` | ID del sitio SharePoint |
 
+> **Producción:** `SENDGRID_API_KEY` y `DATAVERSE_URL` son secretos — mejor no guardarlos en texto
+> plano aquí. La guía para moverlos a **Azure Key Vault** (con Managed Identity, sin tocar código)
+> está en `DESPLIEGUE_AZURE.md` → sección "Secretos con Azure Key Vault". Las variables
+> `NEXT_PUBLIC_*` sí deben quedarse como Application Settings normales (Next.js las necesita
+> disponibles durante `npm run build`, no solo en runtime).
+
 Además, agrega estas dos para que Azure compile el proyecto automáticamente al recibir el código (build con Oryx):
 
 | Key | Valor |
