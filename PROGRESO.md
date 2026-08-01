@@ -51,3 +51,11 @@ Disparadores automáticos (`CampaignService`):
 ## Notas de trabajo con el usuario
 - El usuario corre el proyecto (`npm run dev`) en su propia terminal — no lanzar el servidor de desarrollo por él.
 - Verificación de cambios en esta sesión: `npx tsc --noEmit` (sin errores).
+- Para tareas de Azure, dar siempre pasos manuales del Portal — no ejecutar `az` CLI por el usuario.
+
+## Despliegue en Azure App Service
+
+- Repo conectado por GitHub Actions: `.github/workflows/main_calendarioweb05.yml` (generado por Azure Deployment Center).
+- Web App: `calendarioweb05` (Azure le asigna un hostname único, ej. `calendarioweb05-xxxxxxx.centralus-01.azurewebsites.net` — **no** el clásico `calendarioweb05.azurewebsites.net`, ese ya no se usa por defecto en recursos nuevos).
+- `npm run build` local corre limpio, sin variables de entorno obligatorias todavía (todo lo que usa `SENDGRID_API_KEY` etc. sigue siendo mock/`console.log`).
+- 2026-08-01: el Web App mostraba la plantilla por defecto de Azure ("Welcome") — el recurso se había recreado (nuevo hostname) y nunca había recibido un deploy real, aunque el primer run del workflow sí había sido exitoso contra el recurso anterior. Se solucionó forzando un nuevo push para disparar el workflow contra el recurso actual.
