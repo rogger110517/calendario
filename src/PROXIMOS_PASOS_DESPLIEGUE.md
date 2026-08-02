@@ -3,67 +3,70 @@
 Checklist de lo que falta hacer **de tu lado en Azure/GitHub** para dejar
 `calendarioweb05` funcionando. El código y el workflow ya están listos y
 verificados (`npm run build` corre limpio, sin errores) — lo que queda
-pendiente es 100% configuración en Azure, no código.
+pendiente es 100% configuración en Azure/GitHub, no código.
 
-## Diagnóstico hasta ahora
+## Acción actual: cambiar de OIDC a Publish Profile
+
+El login automático (OIDC) sigue fallando con el mismo error incluso después
+de Desconectar/Reconectar en Deployment Center (ver "Diagnóstico" abajo).
+Vamos a evitarlo por completo usando el método clásico de **Publish Profile**.
+
+### Lo que tienes que hacer tú (en este orden)
+
+1. **Portal de Azure → Web App `calendarioweb05` → Overview** → botón
+   **"Obtener perfil de publicación"** ("Get publish profile"). Se descarga
+   un archivo `.PublishSettings`.
+2. Ábrelo con el Bloc de notas (es texto/XML) y copia **todo** el contenido.
+3. **GitHub → repo `calendario` → Settings → Secrets and variables → Actions
+   → "New repository secret"**:
+   - **Name:** `AZURE_WEBAPP_PUBLISH_PROFILE`
+   - **Value:** pega el XML completo que copiaste
+   - **Add secret**
+4. Avísame en el chat cuando el secret ya esté creado (no hace falta que me
+   pegues el contenido — es sensible, solo confírmame que lo agregaste).
+
+### Lo que hago yo después
+
+En cuanto confirmes el paso 4, edito
+`.github/workflows/main_calendarioweb05.yml` para:
+- Quitar el paso `Login to Azure` (`azure/login@v2`) y el permiso `id-token: write`
+  (ya no hacen falta, eran solo para OIDC).
+- Agregar `publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}` al
+  paso `azure/webapps-deploy`.
+
+Con eso hago commit + push, se dispara el deploy solo, y probamos la URL de
+nuevo.
+
+## Después de que el login funcione — checklist adicional
+
+Si el deploy pasa pero el sitio sigue sin mostrar la app (plantilla por
+defecto de Azure en vez del login/calendario), revisa esto en el Portal:
+
+1. **Comando de inicio** — Web App → Configuración → Configuración general →
+   Comando de inicio. Si está vacío, escribe `npm run start` → Guardar.
+2. **Pila (runtime stack)** — misma pantalla: `Node`, `Linux`, 20 o 22 LTS.
+3. **Log stream** — Web App → Supervisión → Log stream. Ábrelo y recarga el
+   sitio en otra pestaña; si el proceso falla al arrancar, el error real
+   (módulo faltante, puerto, etc.) aparece ahí en vivo.
+4. **Reiniciar** — Web App → Overview → botón "Reiniciar", por si el proceso
+   quedó colgado de un deploy anterior.
+
+## Diagnóstico (por qué se llegó a esta decisión)
 
 - El sitio (`https://calendarioweb05-bna8ethvgzetafhs.centralus-01.azurewebsites.net`)
-  sigue mostrando la **plantilla por defecto de Azure**, no la app.
-- Un run del workflow falló con:
+  mostraba la plantilla por defecto de Azure, no la app.
+- El workflow fallaba en el paso `Login to Azure` con:
   ```
   AADSTS700213: No matching federated identity record found for presented
   assertion subject 'repo:rogger110517@89188172/calendario@1317729510:ref:refs/heads/main'
   ```
-  → la credencial federada (OIDC) para que GitHub Actions inicie sesión en Azure
-  estaba desincronizada (probablemente porque el Web App se recreó en algún
-  momento con un hostname nuevo).
-- Ya hiciste **Desconectar / Reconectar** en Deployment Center, lo que generó
-  credenciales nuevas (`AZUREAPPSERVICE_CLIENTID_A7E52BC6...`, etc.) — pero el
-  sitio sigue sin mostrar contenido real, así que hay que confirmar si esa
-  reconexión quedó bien o si hay un segundo problema encima (ej. Startup Command).
-
-## Checklist — hazlo en este orden
-
-### 1. Confirmar si el último run realmente pasó el login
-- GitHub → repo `calendario` → pestaña **Actions**.
-- Abre el run **más reciente** (commit `135fe1d`, "Add or update the Azure App
-  Service build and deployment workflow config").
-- ¿Está en verde (✅) o rojo (❌)?
-  - Si es **rojo**, abre el job → paso **"Login to Azure"** → copia el error
-    completo (como hiciste antes) — probablemente vuelve a fallar por lo mismo,
-    y hay que revisar la credencial federada directamente en Entra ID
-    (App registrations → la app de Deployment Center → Certificados y
-    secretos → Credenciales federadas → verificar que el "Subject identifier"
-    coincida exactamente con lo que pide el error).
-  - Si es **verde**, sigue al paso 2.
-
-### 2. Revisar el Comando de inicio
-**Portal → Web App `calendarioweb05` → Configuración → Configuración general
-→ Comando de inicio.**
-- Si está vacío, escribe: `npm run start` → **Guardar** (reinicia la app sola).
-
-### 3. Confirmar la Pila (runtime stack)
-Misma pantalla del paso 2: **Pila = Node**, **Sistema operativo = Linux**,
-versión 20 LTS o 22 LTS (coincide con lo que usa el workflow).
-
-### 4. Ver el Log stream mientras recargas el sitio
-**Portal → Web App → Supervisión → Log stream.** Ábrelo, y en otra pestaña
-recarga `https://calendarioweb05-bna8ethvgzetafhs.centralus-01.azurewebsites.net`.
-Si el proceso intenta arrancar y falla, el error real (módulo faltante, puerto,
-etc.) va a aparecer ahí en vivo. Cópiame lo que salga si sigue sin funcionar.
-
-### 5. Reiniciar el recurso
-**Portal → Web App → Overview → botón "Reiniciar" (Restart).** A veces el
-proceso queda colgado tras un deploy y un restart manual lo destraba.
-
-### 6. Verificar
-Abre de nuevo la URL y prueba login / calendario / crear una campaña.
-
-## Si nada de esto funciona
-
-Copia y pégame:
-- El estado (verde/rojo) del último run de Actions.
-- El log completo del paso que falle (Login to Azure o el de Deploy).
-- Lo que aparezca en Log stream al recargar el sitio.
-
-Con eso identifico el siguiente paso exacto — evitamos adivinar sin datos.
+- Se probó **Desconectar/Reconectar** en Deployment Center — generó
+  credenciales nuevas (`AZUREAPPSERVICE_CLIENTID_A7E52BC6...`), pero el
+  siguiente run falló **con el mismo subject exacto**, señal de que el
+  asistente automático de Azure no está generando bien la credencial
+  federada para este repositorio (posiblemente por un historial de
+  rename/recreación que hace que GitHub incluya IDs numéricos en el subject:
+  `owner@id/repo@id`). Por eso se decidió saltarse OIDC y usar Publish
+  Profile en su lugar.
+- Avisos de "Node.js 20 deprecated" en los logs son informativos, no la causa
+  del fallo — se pueden ignorar.
