@@ -142,13 +142,17 @@ las sobreescribe sin tocar código.
       App Service → Configuration → Application settings) y quitar el
       fallback hardcodeado de `client.ts` cuando se pase de "prueba rápida"
       a algo más permanente.
-- [ ] **Confirmar el entity set exacto** — asumí `cre47_comunicaciondecampanas`
-      (la `s` que agrega Dataverse por default). Si en QA quedó distinto,
-      ajusto `ENTITY_SET` en `campaign-dataverse.service.ts`.
-- [ ] **Valores reales de los Picklist** — `campaign.options.ts` tiene
-      placeholders (`100000000`, `100000001`, ...). Abrir cada columna
-      Choice en Power Apps → "Editar opciones" → copiar el Valor numérico
-      real de cada opción y actualizarlos ahí.
+- [x] **Entity set confirmado** — `cre47_comunicaciondecampanas` es correcto.
+      Probado el 2026-08-02 con un `POST` real (`204 No Content`, fila creada
+      y luego borrada) directo contra Dataverse QA.
+- [x] **Valores reales de los Picklist confirmados** — se consultó
+      `Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet`
+      para las 4 columnas Choice y `campaign.options.ts` ya tiene los
+      valores reales (base `333900000`, no `100000000` como se asumió al
+      principio). El primer intento real falló con
+      `A validation error occurred. The value 100000001 of
+      'cre47_tipoderecurrencia' ... outside the valid range` — quedó
+      corregido.
 - [ ] **Canal de envío fijo en "Email"** — `Campaign` no tiene un campo de
       canal propio; si más adelante se agrega selector de canal al
       formulario, hay que pasarlo a `mapOcurrenciaFields()` en vez del

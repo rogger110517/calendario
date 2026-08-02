@@ -1,41 +1,42 @@
 /**
  * Valores numéricos de las columnas Choice/Picklist de
- * cre47_comunicaciondecampana (entorno QA).
+ * cre47_comunicaciondecampana (entorno QA — mafperutst.crm.dynamics.com).
  *
- * PENDIENTE DE CONFIRMAR: estos son valores placeholder siguiendo la
- * numeración estándar que Dataverse asigna por default a option sets
- * personalizados (100000000, 100000001, ...). Hay que verificarlos en QA:
- * Power Apps → Tablas → cre47_comunicaciondecampana → Columnas → abrir cada
- * columna Choice → "Editar opciones" → el "Valor" numérico de cada opción.
- * Ajustar aquí una vez confirmados. Ver src/DESPLIEGUE_DATAVERSE.md.
+ * Confirmados el 2026-08-02 consultando
+ * EntityDefinitions(...)/Attributes(...)/Microsoft.Dynamics.CRM.PicklistAttributeMetadata?$expand=OptionSet
+ * directamente contra Dataverse (no son un placeholder). Si se agregan
+ * opciones nuevas en Power Apps, hay que volver a consultar y actualizar
+ * este archivo a mano.
  */
 import type { CampaignEstado, TipoRecurrencia, CommunicationCanal, CommunicationEstado } from '@/types'
 
 export const ESTADO_CAMPANA_OPTIONS: Record<CampaignEstado, number> = {
-  Pendiente: 100000000,
-  Aprobada: 100000001,
-  Rechazada: 100000002,
-  Ejecutada: 100000003,
-  Cancelada: 100000004,
+  Pendiente: 333900000,
+  Aprobada: 333900001,
+  Rechazada: 333900002,
+  Ejecutada: 333900003,
+  Cancelada: 333900004,
 }
 
+// Dataverse tiene también Mensual (333900002) y Anual (333900004), pero
+// TipoRecurrencia en src/types/index.ts solo maneja estas 3.
 export const TIPO_RECURRENCIA_OPTIONS: Record<TipoRecurrencia, number> = {
-  Diario: 100000000,
-  Semanal: 100000001,
-  Trimestral: 100000002,
+  Diario: 333900000,
+  Semanal: 333900001,
+  Trimestral: 333900003,
 }
 
 export const CANAL_ENVIO_OPTIONS: Record<CommunicationCanal, number> = {
-  Email: 100000000,
-  SMS: 100000001,
-  Push: 100000002,
-  WhatsApp: 100000003,
+  Email: 333900000,
+  SMS: 333900001,
+  Push: 333900002,
+  WhatsApp: 333900003,
 }
 
 export const ESTADO_ENVIO_OPTIONS: Record<CommunicationEstado, number> = {
-  Pendiente: 100000000,
-  Programado: 100000001,
-  Enviado: 100000002,
-  Error: 100000003,
-  Cancelado: 100000004,
+  Pendiente: 333900000,
+  Programado: 333900001,
+  Enviado: 333900002,
+  Error: 333900003,
+  Cancelado: 333900004,
 }
