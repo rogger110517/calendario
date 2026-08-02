@@ -31,7 +31,9 @@ jobs:
 
       - name: Prepare standalone output for deployment
         run: |
-          cp -r public .next/standalone/public
+          if [ -d public ]; then
+            cp -r public .next/standalone/public
+          fi
           mkdir -p .next/standalone/.next
           cp -r .next/static .next/standalone/.next/static
 
