@@ -5,7 +5,18 @@ Checklist de lo que falta hacer **de tu lado en Azure/GitHub** para dejar
 verificados (`npm run build` corre limpio, sin errores) — lo que queda
 pendiente es 100% configuración en Azure/GitHub, no código.
 
-## Acción actual: cambiar de OIDC a Publish Profile
+## Actualización 2026-08-02
+
+En vez de Publish Profile, se optó por arreglar OIDC directamente: se creó
+una nueva App Registration (`github-calendario`) con una credencial federada
+apuntando al Repository ID `1317729510` / rama `main`, y se le asignó el rol
+"Colaborador de sitio web" sobre `calendarioweb05`. Los 3 secrets de GitHub
+(`AZUREAPPSERVICE_CLIENTID_...`, `TENANTID_...`, `SUBSCRIPTIONID_...`)
+mantuvieron el mismo nombre pero con los valores de esta App Registration
+nueva — el workflow no necesitó cambios. Se disparó un push de prueba para
+confirmar si el login ya pasa.
+
+## Plan anterior (referencia): cambiar de OIDC a Publish Profile
 
 El login automático (OIDC) sigue fallando con el mismo error incluso después
 de Desconectar/Reconectar en Deployment Center (ver "Diagnóstico" abajo).
