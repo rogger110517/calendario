@@ -51,6 +51,7 @@ export interface Campaign {
   fechaRegistro: string          // ISO datetime
   estado: CampaignEstado
   comunicaciones?: Communication[]
+  dataverseIds?: string[]        // GUIDs de cre47_comunicaciondecampanaid — 1 por fecha de envío
 }
 
 // ─── Communication ─────────────────────────────────────────────────────────

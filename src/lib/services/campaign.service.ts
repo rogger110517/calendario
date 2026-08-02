@@ -4,6 +4,28 @@ import { NotificationService } from '@/lib/services/notification.service'
 import type { Campaign, CampaignFormData, TipoRecurrencia, User } from '@/types'
 import dayjs from 'dayjs'
 
+/**
+ * Sincroniza la campaña contra Dataverse vía el Route Handler
+ * /api/dataverse/sync-campaign (las credenciales viven solo en el server).
+ * Best-effort: si falla (Dataverse mal configurado, sin credenciales
+ * todavía, etc.) no interrumpe el flujo local — solo queda logueado.
+ */
+async function syncCampaignToDataverse(campaign: Campaign): Promise<void> {
+  try {
+    const res = await fetch('/api/dataverse/sync-campaign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campaign }),
+    })
+    const { dataverseIds } = (await res.json()) as { dataverseIds: string[] }
+    if (dataverseIds?.length && !campaign.dataverseIds?.length) {
+      await CampaignRepository.update(campaign.id, { dataverseIds })
+    }
+  } catch (err) {
+    console.error('[Dataverse] sync falló', err)
+  }
+}
+
 // ── Cálculo de fechas de recurrencia ─────────────────────────────────────────
 const INTERVALO_RECURRENCIA: Record<TipoRecurrencia, [number, dayjs.ManipulateType]> = {
   Diario:     [1, 'day'],
@@ -109,6 +131,7 @@ export const CampaignService = {
     }
     const campaign = await CampaignRepository.create(payload)
     await NotificationService.notificarNuevaCampana(campaign)
+    void syncCampaignToDataverse(campaign)
     return campaign
   },
 
@@ -117,6 +140,7 @@ export const CampaignService = {
     const campaign = await CampaignRepository.update(id, data)
     if (campaign && data.estado && data.estado !== anterior?.estado) {
       await NotificationService.notificarCambioEstado(campaign)
+      void syncCampaignToDataverse(campaign)
     }
     return campaign
   },
