@@ -2,9 +2,17 @@
 
 > Generado el 2026-08-02, actualizado el mismo día tras agregar columnas
 > nuevas (`cre47_cantidaddealers`, `cre47_unidaddenegocio`,
-> `cre47_horadeenvio`, `cre47_fechasrecurrencia`) y decidir el diseño
-> "una fila por fecha de envío". Documenta cómo quedó la tabla en QA y
-> cómo quedó implementado el registro automático desde el código.
+> `cre47_horadeenvio`, `cre47_fechasrecurrencia`), decidir el diseño
+> "una fila por fecha de envío" y cambiar la autenticación a ROPC
+> (usuario/contraseña) con las credenciales reales de QA. Documenta cómo
+> quedó la tabla y el registro automático desde el código.
+>
+> ⚠️ **Credenciales hardcodeadas a propósito.** `src/lib/dataverse/client.ts`
+> tiene el usuario/contraseña/appId de QA como fallback literal en el
+> código — a pedido explícito, para poder probar de inmediato sin esperar
+> a mover esto a Application Settings. Quedan commiteadas en el repo. Rotar
+> la contraseña de `mafcrm@mafperu.com.pe` cuando termine la prueba y mover
+> esto a variables de entorno reales (ver sección 5).
 
 ## 1. Tabla en QA
 
@@ -80,7 +88,7 @@ después (al aprobar/rechazar) sin crear filas duplicadas.
 
 ```
 src/lib/dataverse/
-├── client.ts                      ← auth OAuth2 client_credentials + fetch genérico (dvCreate/dvUpdate)
+├── client.ts                      ← auth OAuth2 ROPC (usuario/contraseña) + fetch genérico (dvCreate/dvUpdate)
 ├── campaign.options.ts            ← valores numéricos de los Picklist (PLACEHOLDER, ver pendientes)
 ├── campaign.mapper.ts             ← separa campos "de campaña" vs "de ocurrencia"
 └── campaign-dataverse.service.ts  ← resuelve Dealer/Unidad/User, crea N filas o actualiza N filas
@@ -106,22 +114,34 @@ Flujo:
    reservados para que los actualice el flujo de Power Automate.
 
 **Diseño "best-effort":** todo el sync está en `try/catch`, nunca lanza — si
-`DATAVERSE_CLIENT_SECRET` está vacío (como ahora, a propósito, ver sección
-5) o Dataverse no responde, la campaña se crea/actualiza igual en la app; el
-error queda solo en la consola del servidor (`[Dataverse] ...`).
+Dataverse no responde o rechaza el login, la campaña se crea/actualiza igual
+en la app; el error queda solo en la consola del servidor
+(`[Dataverse] ...`).
 
-## 5. Pendiente
+## 5. Credenciales de QA — auth ROPC (usuario/contraseña)
 
-- [ ] **Credenciales reales** — quedan **estáticas/en blanco por ahora**,
-      tal como pediste. Cuando las tengas, pásame:
-      - `DATAVERSE_TENANT_ID` (tenant de Entra ID)
-      - `DATAVERSE_CLIENT_ID` (App Registration)
-      - `DATAVERSE_CLIENT_SECRET` (secret de esa App Registration)
-      - Confirmación de que esa App tiene un **Application User** creado en
-        el entorno QA de Dataverse, con rol de seguridad que permita
-        crear/editar filas de `cre47_comunicaciondecampana`.
-      Van en `.env.local` (gitignored, no se commitea) y luego como
-      Application Settings de Azure App Service para producción.
+| Variable | Valor | Dónde vive hoy |
+|---|---|---|
+| `DATAVERSE_URL` | `https://mafperutst.crm.dynamics.com` | hardcodeado en `client.ts` (fallback) |
+| `DATAVERSE_APP_ID` | `51f81489-12ee-4a9e-aaae-a2591f45987d` | hardcodeado en `client.ts` (fallback) |
+| `DATAVERSE_USERNAME` | `mafcrm@mafperu.com.pe` | hardcodeado en `client.ts` (fallback) |
+| `DATAVERSE_PASSWORD` | *(la que compartiste en el chat)* | hardcodeado en `client.ts` (fallback) |
+| `DATAVERSE_TENANT` | `common` (se resuelve automático por el username) | default en código |
+
+`requireEnv()` en `client.ts` lee primero las variables de entorno
+(`DATAVERSE_*`) y si no están, usa estos valores fijos como fallback — así
+que definir las env vars en `.env.local` o en Application Settings de Azure
+las sobreescribe sin tocar código.
+
+## 6. Pendiente
+
+- [ ] **Rotar la contraseña de `mafcrm@mafperu.com.pe`** una vez terminadas
+      las pruebas de QA — quedó commiteada en el repo a pedido explícito
+      para poder probar ya, así que hay que asumir que está expuesta.
+- [ ] **Mover las credenciales a Application Settings de Azure** (Portal →
+      App Service → Configuration → Application settings) y quitar el
+      fallback hardcodeado de `client.ts` cuando se pase de "prueba rápida"
+      a algo más permanente.
 - [ ] **Confirmar el entity set exacto** — asumí `cre47_comunicaciondecampanas`
       (la `s` que agrega Dataverse por default). Si en QA quedó distinto,
       ajusto `ENTITY_SET` en `campaign-dataverse.service.ts`.
@@ -133,21 +153,26 @@ error queda solo en la consola del servidor (`[Dataverse] ...`).
       canal propio; si más adelante se agrega selector de canal al
       formulario, hay que pasarlo a `mapOcurrenciaFields()` en vez del
       valor fijo actual.
+- [ ] **ROPC puede fallar si la cuenta tiene MFA habilitado** — Entra ID
+      bloquea `grant_type=password` para cuentas con multi-factor. Si el
+      login falla con algo tipo `AADSTS50076`/`AADSTS50079`, es por eso —
+      la alternativa sería client_credentials con Application User (lo que
+      se implementó originalmente antes de este cambio).
 
-## 6. Cómo probar en QA una vez tengas las credenciales
+## 7. Cómo probar en QA ahora mismo
 
-1. Completar `DATAVERSE_TENANT_ID`, `DATAVERSE_CLIENT_ID`,
-   `DATAVERSE_CLIENT_SECRET` en `.env.local`.
-2. Reiniciar `npm run dev` (las variables de entorno solo se leen al
-   arrancar).
-3. Crear una campaña de prueba **recurrente** (para validar que se crean
+1. `npm run dev` (ya no hace falta configurar nada más — las credenciales
+   están hardcodeadas como fallback).
+2. Crear una campaña de prueba **recurrente** (para validar que se crean
    varias filas, no solo una).
-4. Revisar la consola del servidor: si algo falla aparece como
-   `[Dataverse] No se pudo registrar la campaña <error>`.
-5. En Power Apps → Tablas → Comunicación de Campaña → Datos, confirmar que
+3. Revisar la consola del servidor: si algo falla aparece como
+   `[Dataverse] No se pudo registrar la campaña <error>` — el error trae el
+   detalle (401 = credenciales/MFA, 404 = entity set mal, 400 = algún
+   Picklist con valor inválido).
+4. En Power Apps → Tablas → Comunicación de Campaña → Datos, confirmar que
    aparecieron tantas filas como fechas de envío, todas con los mismos
    datos de campaña pero `cre47_fechasrecurrencia` distinta.
-6. Cambiar el estado de esa campaña a Aprobada/Rechazada en la app y
+5. Cambiar el estado de esa campaña a Aprobada/Rechazada en la app y
    confirmar que `cre47_estadodelacampana` se actualiza en **todas** las
    filas de esa campaña (no crea filas nuevas, no toca
    `cre47_estadodelenvio`).

@@ -2,11 +2,19 @@
  * Cliente Dataverse Web API — SOLO server-side.
  *
  * Nunca importar este archivo desde un componente/hook que corra en el
- * navegador: usa DATAVERSE_CLIENT_SECRET, que jamás debe llegar al bundle
- * del cliente. Se invoca desde Route Handlers (src/app/api/**).
+ * navegador: usa DATAVERSE_PASSWORD, que jamás debe llegar al bundle del
+ * cliente. Se invoca desde Route Handlers (src/app/api/**).
  *
- * Auth: OAuth2 client_credentials contra Entra ID (App Registration +
- * Application User creado en el entorno de Dataverse).
+ * Auth: OAuth2 Resource Owner Password Credentials (ROPC) contra Entra ID
+ * — mismo patrón que ya usa el resto de sistemas MAF (App Registration
+ * pública, sin client secret, + usuario/contraseña de servicio).
+ *
+ * ⚠️ TEMPORAL: a pedido explícito, los valores de conexión a QA quedan
+ * hardcodeados como fallback más abajo para poder probar de inmediato.
+ * Rotar la contraseña de mafcrm@mafperu.com.pe después de las pruebas y
+ * mover esto a variables de entorno / Application Settings de Azure
+ * (las env vars DATAVERSE_* siguen teniendo prioridad si se configuran).
+ * Ver src/DESPLIEGUE_DATAVERSE.md.
  */
 
 interface TokenCache {
@@ -16,38 +24,46 @@ interface TokenCache {
 
 let cached: TokenCache | null = null
 
+const FALLBACK = {
+  appId: '51f81489-12ee-4a9e-aaae-a2591f45987d',
+  username: 'mafcrm@mafperu.com.pe',
+  password: 'P4ssW0rdM4f2023##',
+  dataverseUrl: 'https://mafperutst.crm.dynamics.com',
+}
+
 function requireEnv() {
-  const tenantId = process.env.DATAVERSE_TENANT_ID
-  const clientId = process.env.DATAVERSE_CLIENT_ID
-  const clientSecret = process.env.DATAVERSE_CLIENT_SECRET
-  const dataverseUrl = process.env.DATAVERSE_URL
-  if (!tenantId || !clientId || !clientSecret || !dataverseUrl) {
-    throw new Error('Dataverse no configurado: faltan variables de entorno DATAVERSE_*')
-  }
-  return { tenantId, clientId, clientSecret, dataverseUrl }
+  const appId = process.env.DATAVERSE_APP_ID || FALLBACK.appId
+  const username = process.env.DATAVERSE_USERNAME || FALLBACK.username
+  const password = process.env.DATAVERSE_PASSWORD || FALLBACK.password
+  const dataverseUrl = process.env.DATAVERSE_URL || FALLBACK.dataverseUrl
+  const tenant = process.env.DATAVERSE_TENANT || 'common'
+  return { appId, username, password, dataverseUrl, tenant }
 }
 
 async function getAccessToken(): Promise<string> {
   if (cached && cached.expiresAt > Date.now()) return cached.token
 
-  const { tenantId, clientId, clientSecret, dataverseUrl } = requireEnv()
+  const { appId, username, password, dataverseUrl, tenant } = requireEnv()
 
-  const res = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+  // Endpoint v1 (no v2.0): es el que soporta grant_type=password (ROPC)
+  // contra Dataverse, igual que usa Microsoft.Xrm.Tooling.Connector.
+  const res = await fetch(`https://login.microsoftonline.com/${tenant}/oauth2/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: clientId,
-      client_secret: clientSecret,
-      scope: `${dataverseUrl}/.default`,
+      grant_type: 'password',
+      client_id: appId,
+      username,
+      password,
+      resource: dataverseUrl,
     }),
   })
   if (!res.ok) {
     throw new Error(`Login Dataverse falló (${res.status}): ${await res.text()}`)
   }
 
-  const json = (await res.json()) as { access_token: string; expires_in: number }
-  cached = { token: json.access_token, expiresAt: Date.now() + (json.expires_in - 60) * 1000 }
+  const json = (await res.json()) as { access_token: string; expires_in: string }
+  cached = { token: json.access_token, expiresAt: Date.now() + (Number(json.expires_in) - 60) * 1000 }
   return cached.token
 }
 
