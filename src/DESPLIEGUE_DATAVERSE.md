@@ -163,7 +163,61 @@ las sobreescribe sin tocar código.
       la alternativa sería client_credentials con Application User (lo que
       se implementó originalmente antes de este cambio).
 
-## 7. Cómo probar en QA ahora mismo
+## 7. Pendiente (diseño) — Idempotencia con Alternate Key
+
+**El problema hoy:** cada fila creada en Dataverse recibe un GUID nuevo, que
+se guarda de vuelta en `campaign.dataverseIds` (en memoria, vía
+`CampaignRepository.update`). Si ese guardado no llega a pasar — el proceso
+se reinicia, el store en memoria se pierde (pasa en cada redeploy, porque
+hoy `CampaignRepository` es JSON en memoria, no una base real) — la próxima
+sincronización no tiene forma de saber que esa fila ya existe, y
+`syncOnCreate()` la vuelve a crear: **fila duplicada**. El ID que "viaja"
+hoy es el que genera Dataverse, no uno propio y determinístico.
+
+**La solución: Alternate Key + upsert.** En vez de depender de recordar el
+GUID que devuelve Dataverse, se agrega una clave alternativa con un ID
+propio y reproducible (`campaignId + fecha`), y cada sync hace `PATCH`
+contra esa clave. Dataverse resuelve el upsert solo: crea si no existe,
+actualiza si existe — sin duplicar, sin importar si se perdió el estado
+local.
+
+### Qué crear en Power Apps (antes de tocar código)
+
+1. **Tablas → `cre47_comunicaciondecampana` → Columnas → Nueva columna**
+   - Nombre para mostrar: `Id externo`
+   - Nombre lógico resultante: `cre47_idexterno`
+   - Tipo de dato: **Texto** (100 caracteres), no requerido.
+2. **Tablas → `cre47_comunicaciondecampana` → Claves (Keys) → Nueva clave
+   alternativa**
+   - Seleccionar la columna `cre47_idexterno` → Guardar.
+   - Dataverse construye el índice en segundo plano — puede tardar unos
+     minutos antes de que la clave quede activa (columna "Estado" pasa de
+     "Activo (compilando índice)" a "Activo").
+
+### Cómo quedaría el código (una vez creada la clave, no implementado aún)
+
+- `mapOcurrenciaFields()` (`campaign.mapper.ts`) agrega
+  `cre47_idexterno: `${campaign.id}-${fecha}`` a cada fila.
+- `client.ts` suma una función `dvUpsert(entitySet, keyField, keyValue, body)`
+  que hace `PATCH /{entitySet}(<keyField>='<keyValue>')` — la sintaxis de
+  upsert por alternate key de la Dataverse Web API.
+- `campaign-dataverse.service.ts` deja de distinguir "crear" vs "actualizar"
+  por `dataverseIds` — cada llamada a `syncCampaign(campaign)` simplemente
+  hace upsert de todas las filas de esa campaña por su `cre47_idexterno`
+  calculado. Esto simplifica el flujo: **ya no hace falta rastrear
+  `dataverseIds` en memoria en absoluto** — se puede quitar ese campo de
+  `Campaign` (`src/types/index.ts`) y de `CampaignRepository`.
+- Se llama igual en los mismos 2 puntos que hoy (crear, y cambio de
+  `estado` en aprobar/rechazar) — **no se necesita ningún campo nuevo para
+  aprobar/rechazar en sí**, `cre47_estadodelacampana` ya cubre eso. El único
+  campo nuevo es `cre47_idexterno`, y es exclusivamente para resolver la
+  idempotencia del sync, no para el flujo de negocio.
+
+Avísame cuando crees la columna + la clave alternativa en Power Apps y
+confirmes que el índice ya quedó "Activo" — ahí implemento los cambios de
+código de esta sección.
+
+## 8. Cómo probar en QA ahora mismo
 
 1. `npm run dev` (ya no hace falta configurar nada más — las credenciales
    están hardcodeadas como fallback).
