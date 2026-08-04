@@ -1,5 +1,6 @@
 import { dvDelete, dvUpsert } from './client'
 import { fechasDeEnvio, idExterno, mapCampaignLevelFields, mapOcurrenciaFields } from './campaign.mapper'
+import { fetchCampaignsFromDataverse } from './campaign-dataverse.reader'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
 import { UnidadRepository } from '@/lib/repositories/unidad.repository'
 import type { Campaign } from '@/types'
@@ -22,9 +23,26 @@ export const CampaignDataverseService = {
    * campaña, vía upsert por cre47_campanaid (= campaignId + fecha, único
    * por fila). Idempotente: reintentar no duplica filas. No lanza: si
    * falla, solo loguea.
+   *
+   * Resguardo de "máximo 2 por día" del lado de Dataverse (además del
+   * chequeo en el formulario): si ya hay 2 campañas activas ese día,
+   * NO sincroniza — evita que una 3ra llegue a quedar registrada aunque
+   * algo se haya colado del lado del cliente.
    */
   async syncOnCreate(campaign: Campaign): Promise<void> {
     try {
+      const existentes = await fetchCampaignsFromDataverse()
+      const mismaFecha = existentes.filter(
+        (c) => c.id !== campaign.id && c.diaEnvio === campaign.diaEnvio
+          && c.estado !== 'Cancelada' && c.estado !== 'Rechazada',
+      )
+      if (mismaFecha.length >= 2) {
+        console.warn(
+          `[Dataverse] Bloqueado: ya hay ${mismaFecha.length} campañas activas el ${campaign.diaEnvio}, no se registra "${campaign.nombreCampana}"`,
+        )
+        return
+      }
+
       const fechas = fechasDeEnvio(campaign)
       const campaignFields = await resolveCampaignLevelFields(campaign, fechas.length)
       await Promise.all(

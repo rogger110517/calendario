@@ -9,6 +9,8 @@ import type { Campaign } from '@/types'
  * innecesario rastrear GUIDs: "create" y "update" solo difieren en qué
  * campos se mandan (ver CampaignDataverseService).
  */
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   const { campaign, mode } = (await req.json()) as { campaign: Campaign; mode: 'create' | 'update' | 'delete' }
 

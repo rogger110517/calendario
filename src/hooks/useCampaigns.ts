@@ -6,7 +6,7 @@ export const CAMPAIGNS_KEY = ['campaigns'] as const
 
 /** Dataverse es la fuente de verdad — se lee vía el servidor (/api/campaigns), no de memoria local. */
 async function fetchCampaigns(): Promise<Campaign[]> {
-  const res = await fetch('/api/campaigns')
+  const res = await fetch('/api/campaigns', { cache: 'no-store' })
   const json = (await res.json()) as { data: Campaign[]; success: boolean }
   if (!json.success) throw new Error('Error al obtener campañas')
   return json.data

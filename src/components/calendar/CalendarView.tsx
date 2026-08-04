@@ -188,7 +188,7 @@ export function CalendarView() {
         </Box>
 
         {/* ── Mi Área (selector de unidad del usuario) ────────────────────── */}
-        <Tooltip title="Selecciona tu área — los Pendientes de tu unidad se diferencian por color">
+        <Tooltip title="Selecciona tu área — se usa para preseleccionarla al crear una campaña nueva">
           <Select
             value={myUnidad}
             onChange={(e: SelectChangeEvent) => setMyUnidad(e.target.value)}
@@ -219,14 +219,14 @@ export function CalendarView() {
                   </>
                 ) : (
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                    Seleccionar mi área ▾
+                    Mi área: Todos ▾
                   </Typography>
                 )}
               </Box>
             )}
           >
             <MenuItem value="">
-              <Typography variant="body2" color="text.secondary">— Sin selección —</Typography>
+              <Typography variant="body2" color="text.secondary">Todos</Typography>
             </MenuItem>
             {(unidades ?? []).map((u) => (
               <MenuItem key={u.id} value={u.id}>

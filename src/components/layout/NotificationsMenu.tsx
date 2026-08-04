@@ -10,7 +10,6 @@ import CheckCircleIcon     from '@mui/icons-material/CheckCircle'
 import ThumbDownIcon       from '@mui/icons-material/ThumbDown'
 import SendIcon            from '@mui/icons-material/Send'
 import dayjs from 'dayjs'
-import { useCurrentUser } from '@/components/auth/UserProvider'
 import { useCampaignStore } from '@/store/campaign.store'
 import { useCampaigns } from '@/hooks/useCampaigns'
 import {
@@ -28,7 +27,6 @@ const ICONO: Record<NotificationTipo, React.ReactNode> = {
 interface Props { anchorEl: HTMLElement | null; onClose: () => void }
 
 export function NotificationsMenu({ anchorEl, onClose }: Props) {
-  const currentUser = useCurrentUser()
   const { data: notifications } = useNotifications()
   const { data: campaigns } = useCampaigns()
   const { setSelectedCampaign, setDetailOpen } = useCampaignStore()
@@ -55,7 +53,7 @@ export function NotificationsMenu({ anchorEl, onClose }: Props) {
         <Typography variant="body2" fontWeight={700}>Notificaciones</Typography>
         {lista.some((n) => !n.leida) && (
           <Button size="small" sx={{ textTransform: 'none', fontSize: '0.72rem' }}
-            onClick={() => currentUser && markAllRead.mutate(currentUser.id)}>
+            onClick={() => markAllRead.mutate()}>
             Marcar todas como leídas
           </Button>
         )}

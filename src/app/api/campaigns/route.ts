@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { fetchCampaignsFromDataverse } from '@/lib/dataverse/campaign-dataverse.reader'
 
 /** Dataverse es la fuente de verdad para lectura — no la memoria local del navegador. */
+export const dynamic = 'force-dynamic' // nunca cachear: siempre pedir el estado real a Dataverse
+
 export async function GET() {
   try {
     const campaigns = await fetchCampaignsFromDataverse()

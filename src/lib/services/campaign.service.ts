@@ -1,6 +1,5 @@
 import { CampaignRepository } from '@/lib/repositories/campaign.repository'
 import { CommunicationRepository } from '@/lib/repositories/communication.repository'
-import { NotificationService } from '@/lib/services/notification.service'
 import type { Campaign, CampaignFormData, TipoRecurrencia, User } from '@/types'
 import dayjs from 'dayjs'
 
@@ -23,6 +22,18 @@ async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'upd
   } catch (err) {
     console.error('[Dataverse] sync falló', err)
   }
+}
+
+/**
+ * Campañas "reales" para validar reglas de negocio — se leen de Dataverse
+ * (vía /api/campaigns), no de la memoria local del navegador. Si esto
+ * leyera solo memoria local, dos personas en dos navegadores distintos
+ * podrían saltarse el máximo de 2 por día sin verse entre sí.
+ */
+async function fetchCampaignsReales(): Promise<Campaign[]> {
+  const res = await fetch('/api/campaigns', { cache: 'no-store' })
+  const json = (await res.json()) as { data: Campaign[]; success: boolean }
+  return json.success ? json.data : []
 }
 
 // ── Cálculo de fechas de recurrencia ─────────────────────────────────────────
@@ -70,13 +81,13 @@ export const CampaignService = {
     return campaign
   },
 
-  /** Valida reglas de negocio antes de crear */
+  /** Valida reglas de negocio antes de crear — contra las campañas reales (Dataverse), máximo 2 por día. */
   async validarReglas(
     diaEnvio: string,
     dirigidoA: string,
     excludeId?: string,
   ): Promise<ReglaViolacion[]> {
-    const todas = await CampaignRepository.findAll()
+    const todas = await fetchCampaignsReales()
     const activas = todas.filter(
       (c) => c.id !== excludeId && c.estado !== 'Cancelada' && c.estado !== 'Rechazada',
     )
@@ -124,12 +135,11 @@ export const CampaignService = {
       fechasRecurrencia,
       linkOneDrive:      formData.linkOneDrive ?? '',
       comentarios:       formData.comentarios,
-      solicitante:       currentUser.id,
+      solicitante:       currentUser.correo,
       fechaRegistro:     dayjs().toISOString(),
       estado:            'Pendiente',
     }
     const campaign = await CampaignRepository.create(payload)
-    await NotificationService.notificarNuevaCampana(campaign)
     await syncCampaignToDataverse(campaign, 'create')
     return campaign
   },
@@ -144,7 +154,6 @@ export const CampaignService = {
     const actualizada = { ...campaign, ...data }
     await CampaignRepository.update(campaign.id, data).catch(() => null) // best-effort, cache local
     if (data.estado && data.estado !== campaign.estado) {
-      await NotificationService.notificarCambioEstado(actualizada)
       await syncCampaignToDataverse(actualizada, 'update')
     }
     return actualizada
@@ -157,6 +166,14 @@ export const CampaignService = {
   },
 
   async validateSimilar(nombreCampana: string, subject: string): Promise<Campaign[]> {
-    return CampaignRepository.findSimilar(nombreCampana, subject)
+    const todas = await fetchCampaignsReales()
+    const q = (s: string) => s.toLowerCase().trim()
+    return todas.filter(
+      (c) =>
+        q(c.nombreCampana).includes(q(nombreCampana)) ||
+        q(nombreCampana).includes(q(c.nombreCampana)) ||
+        q(c.subject).includes(q(subject)) ||
+        q(subject).includes(q(c.subject)),
+    )
   },
 }

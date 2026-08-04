@@ -419,7 +419,6 @@ export function CampaignFormModal({ open, onClose }: Props) {
         </DialogContent>
 
         <DialogActions sx={{ px: 3, py: 2, borderTop: '1px solid #dee2e6', gap: 1 }}>
-          <Button onClick={onClose} variant="outlined" disabled={isBusy}>Cancelar</Button>
           <Button type="submit" variant="contained" disabled={isBusy}
             sx={{ bgcolor: '#E40521', '&:hover': { bgcolor: '#a80018' } }}
             startIcon={isBusy ? <CircularProgress size={16} color="inherit" /> : null}>

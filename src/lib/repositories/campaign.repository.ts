@@ -49,17 +49,4 @@ export const CampaignRepository = {
     store = store.filter((c) => c.id !== id)
     return store.length < prev
   },
-
-  async findSimilar(nombreCampana: string, subject: string): Promise<Campaign[]> {
-    const q = (s: string) => s.toLowerCase().trim()
-    return structuredClone(
-      store.filter(
-        (c) =>
-          q(c.nombreCampana).includes(q(nombreCampana)) ||
-          q(nombreCampana).includes(q(c.nombreCampana)) ||
-          q(c.subject).includes(q(subject)) ||
-          q(subject).includes(q(c.subject)),
-      ),
-    )
-  },
 }

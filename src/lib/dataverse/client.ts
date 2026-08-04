@@ -72,6 +72,7 @@ async function dvFetch(path: string, init: RequestInit = {}): Promise<Response> 
   const token = await getAccessToken()
   const res = await fetch(`${dataverseUrl}/api/data/v9.2${path}`, {
     ...init,
+    cache: 'no-store',
     headers: {
       Authorization: `Bearer ${token}`,
       'OData-MaxVersion': '4.0',

@@ -122,7 +122,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
     }
   }
 
-  const puedeEliminar = isAdmin && campaign.estado === 'Pendiente'
+  const puedeEliminar = isAdmin
 
   const fmt   = (d: string) => dayjs(d).format('DD/MM/YYYY')
   const fmtT  = (d: string) => dayjs(d).format('DD/MM/YYYY HH:mm')
@@ -191,11 +191,9 @@ export function CampaignDetailModal({ open, onClose }: Props) {
                 ))}
               </Stack>
             ) : (
-              !puedeEliminar && (
-                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                  {campaign.estado === 'Ejecutada' ? '✅ Comunicación enviada — estado final.' : 'Sin más acciones disponibles.'}
-                </Typography>
-              )
+              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                {campaign.estado === 'Ejecutada' ? '✅ Comunicación enviada — estado final.' : 'Sin más acciones disponibles.'}
+              </Typography>
             )}
             {puedeEliminar && (
               <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon />}
