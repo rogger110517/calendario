@@ -8,6 +8,7 @@
  * variando los campos "de ocurrencia" (fecha programada, canal, estado de
  * envío). Ver src/DESPLIEGUE_DATAVERSE.md.
  */
+import dayjs from 'dayjs'
 import type { Campaign, Dealer, Unidad, User } from '@/types'
 import {
   CANAL_ENVIO_OPTIONS,
@@ -33,9 +34,9 @@ export function mapCampaignLevelFields(
     cre47_nombredelconcesionario: dealer?.nombre ?? '',
     cre47_codigodelconcesionario: dealer?.codigo ?? '',
     cre47_cantidaddealers: campaign.cantidadDealers ?? null,
-    cre47_fechadeiniciodelacampana: campaign.diaEnvio,
-    cre47_fechadefindelacampana: campaign.diaFin,
-    cre47_horadeenvio: combinarFechaHora(campaign.diaEnvio, campaign.horaEnvio),
+    cre47_fechadeiniciodelacampana: limaAUtc(campaign.diaEnvio),
+    cre47_fechadefindelacampana: limaAUtc(campaign.diaFin),
+    cre47_horadeenvio: limaAUtc(campaign.diaEnvio, campaign.horaEnvio),
     cre47_silacampanaesrecurrente: campaign.recurrencia,
     ...(campaign.tipoRecurrencia
       ? { cre47_tipoderecurrencia: TIPO_RECURRENCIA_OPTIONS[campaign.tipoRecurrencia] }
@@ -44,6 +45,8 @@ export function mapCampaignLevelFields(
     cre47_urldelarchivoadjunto: campaign.linkOneDrive ?? '',
     cre47_comentarios: campaign.comentarios ?? '',
     cre47_correodelsolicitante: solicitante?.correo ?? '',
+    // fechaRegistro ya es un ISO datetime con offset real (dayjs().toISOString()
+    // en campaign.service.ts) — no pasa por limaAUtc.
     cre47_fechaderegistrodelacampana: campaign.fechaRegistro,
     cre47_estadodelacampana: ESTADO_CAMPANA_OPTIONS[campaign.estado],
   }
@@ -59,8 +62,8 @@ export function mapOcurrenciaFields(campaign: Campaign, fecha: string) {
   return {
     cre47_campanaid: idExterno(campaign, fecha),
     cre47_nombredelacomunicacion: `${campaign.nombreCampana} (${fecha})`,
-    cre47_fechasrecurrencia: fecha,
-    cre47_fechayhoraprogramadaparaesteenvio: combinarFechaHora(fecha, campaign.horaEnvio),
+    cre47_fechasrecurrencia: limaAUtc(fecha),
+    cre47_fechayhoraprogramadaparaesteenvio: limaAUtc(fecha, campaign.horaEnvio),
     // Único canal implementado hoy (SendGrid) — no hay campo de canal en
     // Campaign todavía. Ajustar si se agrega selección de canal al form.
     cre47_canaldeenvio: CANAL_ENVIO_OPTIONS.Email,
@@ -73,7 +76,15 @@ export function fechasDeEnvio(campaign: Campaign): string[] {
   return [campaign.diaEnvio, ...(campaign.recurrencia ? campaign.fechasRecurrencia ?? [] : [])]
 }
 
-function combinarFechaHora(fechaISO: string, horaHHmm: string | undefined): string {
+/**
+ * Convierte una fecha (+ hora opcional) en horario de Lima a un instante
+ * UTC real, con "Z". América/Lima es UTC-5 fijo (Perú no aplica horario de
+ * verano), así que basta un offset fijo — sin necesitar el plugin timezone
+ * de dayjs. Sin esto, Dataverse toma el string tal cual como si YA fuera
+ * UTC (no hace la conversión), desfasando la fecha/hora guardada.
+ */
+function limaAUtc(fechaISO: string, horaHHmm?: string): string {
   const fecha = fechaISO.split('T')[0]
-  return `${fecha}T${horaHHmm && /^\d{2}:\d{2}$/.test(horaHHmm) ? horaHHmm : '00:00'}:00`
+  const hora = horaHHmm && /^\d{2}:\d{2}$/.test(horaHHmm) ? horaHHmm : '00:00'
+  return dayjs(`${fecha}T${hora}:00-05:00`).toISOString()
 }
