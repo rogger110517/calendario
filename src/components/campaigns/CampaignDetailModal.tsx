@@ -17,10 +17,11 @@ import CancelIcon        from '@mui/icons-material/Cancel'
 import SendIcon          from '@mui/icons-material/Send'
 import LinkIcon          from '@mui/icons-material/Link'
 import BusinessIcon      from '@mui/icons-material/Business'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { ConfirmDialog }    from '@/components/common/ConfirmDialog'
 import { useCampaignStore } from '@/store/campaign.store'
 import { useAuthStore }     from '@/store/auth.store'
-import { useUpdateCampaign } from '@/hooks/useCampaigns'
+import { useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns'
 import { useUnidades }       from '@/hooks/useUnidades'
 import { useSnackbar } from 'notistack'
 import { ESTADO_COLORS }    from '@/components/calendar/CalendarView'
@@ -77,10 +78,12 @@ export function CampaignDetailModal({ open, onClose }: Props) {
   const setSelected    = useCampaignStore((s) => s.setSelectedCampaign)
   const currentUser    = useAuthStore((s) => s.currentUser)
   const updateCampaign = useUpdateCampaign()
+  const deleteCampaign = useDeleteCampaign()
   const { data: unidades } = useUnidades()
   const { enqueueSnackbar } = useSnackbar()
-  const [confirmOpen,   setConfirmOpen]   = useState(false)
-  const [pendingAccion, setPendingAccion] = useState<Accion | null>(null)
+  const [confirmOpen,       setConfirmOpen]       = useState(false)
+  const [pendingAccion,     setPendingAccion]     = useState<Accion | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   if (!campaign) return null
 
@@ -106,6 +109,20 @@ export function CampaignDetailModal({ open, onClose }: Props) {
     if (accion.needsConfirm) { setPendingAccion(accion); setConfirmOpen(true) }
     else ejecutarCambio(accion)
   }
+
+  const handleEliminar = async () => {
+    try {
+      await deleteCampaign.mutateAsync(campaign.id)
+      enqueueSnackbar('Campaña eliminada', { variant: 'success' })
+      onClose()
+    } catch {
+      enqueueSnackbar('Error al eliminar la campaña', { variant: 'error' })
+    } finally {
+      setDeleteConfirmOpen(false)
+    }
+  }
+
+  const puedeEliminar = isAdmin && campaign.estado === 'Pendiente'
 
   const fmt   = (d: string) => dayjs(d).format('DD/MM/YYYY')
   const fmtT  = (d: string) => dayjs(d).format('DD/MM/YYYY HH:mm')
@@ -174,9 +191,18 @@ export function CampaignDetailModal({ open, onClose }: Props) {
                 ))}
               </Stack>
             ) : (
-              <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                {campaign.estado === 'Ejecutada' ? '✅ Comunicación enviada — estado final.' : 'Sin más acciones disponibles.'}
-              </Typography>
+              !puedeEliminar && (
+                <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  {campaign.estado === 'Ejecutada' ? '✅ Comunicación enviada — estado final.' : 'Sin más acciones disponibles.'}
+                </Typography>
+              )
+            )}
+            {puedeEliminar && (
+              <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon />}
+                disabled={deleteCampaign.isPending} onClick={() => setDeleteConfirmOpen(true)}
+                sx={{ fontWeight: 700, fontSize: '0.78rem', ml: 'auto' }}>
+                Eliminar
+              </Button>
             )}
           </Box>
         )}
@@ -326,6 +352,16 @@ export function CampaignDetailModal({ open, onClose }: Props) {
           onCancel={() => { setConfirmOpen(false); setPendingAccion(null) }}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="¿Eliminar campaña?"
+        message="Esta acción es irreversible: se borrará la campaña por completo, incluidas sus comunicaciones asociadas."
+        confirmLabel="Sí, eliminar"
+        confirmColor="error"
+        onConfirm={handleEliminar}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </>
   )
 }

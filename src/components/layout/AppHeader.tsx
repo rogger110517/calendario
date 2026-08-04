@@ -10,7 +10,6 @@ import {
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined'
 import MenuBookIcon              from '@mui/icons-material/MenuBook'
 import LogoutIcon                from '@mui/icons-material/Logout'
-import PersonOutlineIcon         from '@mui/icons-material/PersonOutline'
 import SwitchAccountIcon         from '@mui/icons-material/SwitchAccount'
 import { useAuthStore }          from '@/store/auth.store'
 import { ManualUsuarioModal }    from '@/components/common/ManualUsuarioModal'
@@ -148,10 +147,6 @@ export function AppHeader() {
                 sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#E40521', color: '#fff' }} />
             </Box>
           </Box>
-          <MenuItem onClick={() => setAnchor(null)} sx={{ gap: 1.5, py: 1.25 }}>
-            <ListItemIcon><PersonOutlineIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary="Mi perfil" primaryTypographyProps={{ variant: 'body2' }} />
-          </MenuItem>
           <MenuItem onClick={handleLogout} sx={{ gap: 1.5, py: 1.25 }}>
             <ListItemIcon><SwitchAccountIcon fontSize="small" /></ListItemIcon>
             <ListItemText primary="Cambiar cuenta" primaryTypographyProps={{ variant: 'body2' }} />

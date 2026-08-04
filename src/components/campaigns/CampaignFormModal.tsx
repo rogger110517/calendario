@@ -21,6 +21,7 @@ import { useCreateCampaign, useValidateSimilar, useValidarReglas } from '@/hooks
 import { useDealers }        from '@/hooks/useDealers'
 import { useUnidades }       from '@/hooks/useUnidades'
 import type { CampaignFormData, TipoRecurrencia } from '@/types'
+import type { ReglaViolacion } from '@/lib/services/campaign.service'
 
 const TIPOS_RECURRENCIA: TipoRecurrencia[] = ['Diario', 'Semanal', 'Trimestral']
 
@@ -46,12 +47,10 @@ const schema = z.object({
   diaEnvio:        z.string().min(1, 'Fecha de envío requerida'),
   horaEnvio:       z.string().min(1, 'Hora de envío requerida'),
   diaFin:          z.string().min(1, 'Fecha fin requerida'),
-  linkOneDrive:    z.string().url('Ingresa una URL válida de OneDrive').or(z.literal('')).optional(),
+  linkOneDrive:    z.string().min(1, 'Campo requerido').url('Ingresa una URL válida de OneDrive'),
   comentarios:     z.string().optional(),
 }).refine((data) => !data.tieneRecurrencia || !!data.tipoRecurrencia, {
   message: 'Selecciona un tipo de recurrencia', path: ['tipoRecurrencia'],
-}).refine((data) => !data.tieneDealer || data.cantidadDealers !== undefined, {
-  message: 'Ingresa la cantidad de dealers', path: ['cantidadDealers'],
 }).refine((data) => dayjs(data.diaFin).isSame(data.diaEnvio, 'day') || dayjs(data.diaFin).isAfter(data.diaEnvio, 'day'), {
   message: 'La fecha fin debe ser igual o posterior al día de envío', path: ['diaFin'],
 })
@@ -64,9 +63,9 @@ export function CampaignFormModal({ open, onClose }: Props) {
   const currentUser         = useAuthStore((s) => s.currentUser)
   const { enqueueSnackbar } = useSnackbar()
 
-  const [similarWarning, setSimilarWarning] = useState(false)
-  const [reglaWarnings,  setReglaWarnings]  = useState<string[]>([])
-  const [pendingData,    setPendingData]    = useState<FormValues | null>(null)
+  const [similarWarning,   setSimilarWarning]   = useState(false)
+  const [reglaViolaciones, setReglaViolaciones] = useState<ReglaViolacion[]>([])
+  const [pendingData,      setPendingData]      = useState<FormValues | null>(null)
   const [fechaRegistro,  setFechaRegistro]  = useState('')
 
   const { data: dealers }  = useDealers()
@@ -99,7 +98,7 @@ export function CampaignFormModal({ open, onClose }: Props) {
     if (open) {
       reset(defaultValues)
       setSimilarWarning(false)
-      setReglaWarnings([])
+      setReglaViolaciones([])
       setPendingData(null)
       setFechaRegistro(dayjs().format('DD/MM/YYYY HH:mm'))
     }
@@ -120,15 +119,18 @@ export function CampaignFormModal({ open, onClose }: Props) {
 
   const onSubmit = async (data: FormValues) => {
     setSimilarWarning(false)
-    setReglaWarnings([])
+    setReglaViolaciones([])
 
     // Validar reglas de negocio
     const violaciones = await validarReglas.mutateAsync({
       diaEnvio: data.diaEnvio, dirigidoA: data.dirigidoA,
     })
     if (violaciones.length > 0) {
-      setReglaWarnings(violaciones.map((v) => v.mensaje))
-      setPendingData(data)
+      setReglaViolaciones(violaciones)
+      // MAX_COMUNICACIONES es un límite duro (2 por día) — no se guarda
+      // pendingData para esa, así "Crear de todas formas" no puede saltarlo.
+      const soloBloqueantes = violaciones.every((v) => v.tipo === 'MAX_COMUNICACIONES')
+      setPendingData(soloBloqueantes ? null : data)
       return
     }
 
@@ -145,6 +147,8 @@ export function CampaignFormModal({ open, onClose }: Props) {
     try { await doCreate(data) }
     catch { enqueueSnackbar('Error al crear la campaña', { variant: 'error' }) }
   }
+
+  const hayViolacionBloqueante = reglaViolaciones.some((v) => v.tipo === 'MAX_COMUNICACIONES')
 
   const handleForceCreate = async () => {
     if (!pendingData) return
@@ -194,22 +198,24 @@ export function CampaignFormModal({ open, onClose }: Props) {
         <DialogContent sx={{ p: 3 }}>
 
           {/* Alertas de reglas de negocio */}
-          {reglaWarnings.length > 0 && (
+          {reglaViolaciones.length > 0 && (
             <Alert severity="error" icon={<WarningAmberIcon />} sx={{ mb: 2 }}
               action={
-                <Button size="small" color="error" variant="outlined" onClick={handleForceCreate} disabled={isBusy}>
-                  Crear de todas formas
-                </Button>
+                !hayViolacionBloqueante && (
+                  <Button size="small" color="error" variant="outlined" onClick={handleForceCreate} disabled={isBusy}>
+                    Crear de todas formas
+                  </Button>
+                )
               }>
-              <strong>Violación de reglas:</strong>
+              <strong>{hayViolacionBloqueante ? 'No se puede crear la campaña:' : 'Violación de reglas:'}</strong>
               <ul style={{ margin: '4px 0 0 0', paddingLeft: 16 }}>
-                {reglaWarnings.map((w) => <li key={w}><Typography variant="caption">{w}</Typography></li>)}
+                {reglaViolaciones.map((v) => <li key={v.mensaje}><Typography variant="caption">{v.mensaje}</Typography></li>)}
               </ul>
             </Alert>
           )}
 
           {/* Alerta campaña similar */}
-          {similarWarning && !reglaWarnings.length && (
+          {similarWarning && !reglaViolaciones.length && (
             <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}
               action={
                 <Button size="small" color="warning" variant="contained" onClick={handleForceCreate} disabled={isBusy}>
@@ -313,7 +319,7 @@ export function CampaignFormModal({ open, onClose }: Props) {
             {tieneDealer && (
               <Grid size={{ xs: 12, md: 3 }}>
                 <Controller name="cantidadDealers" control={control} render={({ field }) => (
-                  <TextField {...field} value={field.value ?? ''} type="number" label="Cantidad de Dealers" fullWidth size="small" required
+                  <TextField {...field} value={field.value ?? ''} type="number" label="Cantidad de Dealers (opcional)" fullWidth size="small"
                     slotProps={{ htmlInput: { min: 1 } }}
                     error={!!errors.cantidadDealers} helperText={errors.cantidadDealers?.message} />
                 )} />
@@ -391,11 +397,11 @@ export function CampaignFormModal({ open, onClose }: Props) {
               <Controller name="linkOneDrive" control={control} render={({ field }) => (
                 <TextField
                   {...field}
-                  label="Link OneDrive (archivo objetivo)"
-                  fullWidth size="small"
+                  label="Pieza Gráfica"
+                  fullWidth size="small" required
                   placeholder="https://mafperu.sharepoint.com/..."
                   error={!!errors.linkOneDrive}
-                  helperText={errors.linkOneDrive?.message ?? 'URL del archivo Excel en OneDrive/SharePoint'}
+                  helperText={errors.linkOneDrive?.message ?? 'URL de pieza gráfica'}
                   slotProps={{
                     input: { startAdornment: <LinkIcon fontSize="small" color="action" sx={{ mr: 0.5 }} /> },
                   }}

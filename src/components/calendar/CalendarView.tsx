@@ -22,27 +22,14 @@ import { useCampaignStore } from '@/store/campaign.store'
 import type { Campaign, CampaignEstado } from '@/types'
 
 // ── Colores de estado ─────────────────────────────────────────────────────────
-// Pendiente  → color del área que registró (campaign.unidad) — NO usa estos colores
-// Aprobada   → negro grafito  (distinto a cualquier unidad)
-// Ejecutada  → gris marengo   (distinto a cualquier unidad)
-// IMPORTANTE: los colores de Aprobada/Ejecutada deben ser distintos a los colores
-//             de las unidades (azul, morado, verde, naranja, índigo, rosa) para
-//             que el usuario los diferencie visualmente sin confusión.
-// Colores de unidades (definidos en unidades.json):
-//   Ventas            #1565C0  (azul oscuro)
-//   Marketing         #7B1FA2  (morado)
-//   Operaciones       #00695C  (verde azulado)
-//   Fuerza de Ventas  #E65100  (naranja)
-//   Cobranzas         #4527A0  (índigo)
-//   Customer Exp.     #AD1457  (rosa)
-//
-// Aprobada y Enviada usan tonos que NO aparecen en ninguna unidad:
-//   Aprobada → negro carbón  #111827  (ninguna unidad usa negro)
-//   Enviada  → verde lima    #3D7A00  (ninguna unidad usa este tono de verde)
+// El fondo del evento SIEMPRE es el color del área (campaign.unidad) — estos
+// colores solo se usan en el StatusDot (círculo) y en la leyenda.
+// Mismos colores documentados en ManualUsuarioModal.tsx (ESTADOS) — mantener
+// sincronizados si se cambia alguno.
 export const ESTADO_COLORS: Record<CampaignEstado, { bg: string; text: string; label: string }> = {
-  Pendiente: { bg: '#F59E0B', text: '#000', label: 'Pendiente' }, // se reemplaza por color de unidad
-  Aprobada:  { bg: '#111827', text: '#fff', label: 'Aprobada'  }, // negro carbón
-  Ejecutada: { bg: '#3D7A00', text: '#fff', label: 'Enviada'   }, // verde lima
+  Pendiente: { bg: '#F59E0B', text: '#000', label: 'Pendiente' },
+  Aprobada:  { bg: '#2563EB', text: '#fff', label: 'Aprobada'  },
+  Ejecutada: { bg: '#16A34A', text: '#fff', label: 'Enviada'   },
   Rechazada: { bg: '#DC2626', text: '#fff', label: 'Rechazada' },
   Cancelada: { bg: '#9CA3AF', text: '#fff', label: 'Cancelada' },
 }
@@ -134,16 +121,14 @@ export function CalendarView() {
   )
 
   // ── Coloreado de eventos ──────────────────────────────────────────────────
-  // Pendiente  → color del área que registró (campaign.unidad)
-  // Aprobada   → azul fijo  (#2563EB)
-  // Ejecutada  → verde fijo (#16A34A)
+  // El fondo del evento SIEMPRE es el color del área (campaign.unidad),
+  // sin importar el estado. El estado se distingue solo por el círculo
+  // (StatusDot, usa ESTADO_COLORS) dentro del evento.
   // Todos son visibles — sin filtrado
   const events = (campaigns ?? [])
     .filter((c: Campaign) => !OCULTOS.includes(c.estado))
     .flatMap((c: Campaign) => {
-      const color = c.estado === 'Pendiente'
-        ? getUnidadColor(c.unidad)
-        : ESTADO_COLORS[c.estado]?.bg ?? '#4A4A4A'
+      const color = getUnidadColor(c.unidad)
       // Un evento por cada fecha de envío: la fecha principal + las fechas de recurrencia calculadas
       const fechas = c.recurrencia && c.fechasRecurrencia?.length
         ? [c.diaEnvio, ...c.fechasRecurrencia]
