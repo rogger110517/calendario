@@ -2,19 +2,18 @@ import { dvDelete, dvUpsert } from './client'
 import { fechasDeEnvio, idExterno, mapCampaignLevelFields, mapOcurrenciaFields } from './campaign.mapper'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
 import { UnidadRepository } from '@/lib/repositories/unidad.repository'
-import { UserRepository } from '@/lib/repositories/user.repository'
 import type { Campaign } from '@/types'
 
 const ENTITY_SET = 'cre47_comunicaciondecampanas'
 const KEY_FIELD = 'cre47_campanaid'
 
 async function resolveCampaignLevelFields(campaign: Campaign, totalOcurrencias: number) {
-  const [dealer, unidad, solicitante] = await Promise.all([
+  // campaign.solicitante ya es el correo (Easy Auth, no hay catálogo local de usuarios).
+  const [dealer, unidad] = await Promise.all([
     campaign.dealer ? DealerRepository.findById(campaign.dealer) : Promise.resolve(null),
     UnidadRepository.findById(campaign.unidad),
-    UserRepository.findById(campaign.solicitante),
   ])
-  return mapCampaignLevelFields(campaign, dealer, unidad, solicitante, totalOcurrencias)
+  return mapCampaignLevelFields(campaign, dealer, unidad, totalOcurrencias)
 }
 
 export const CampaignDataverseService = {

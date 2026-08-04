@@ -10,7 +10,7 @@ import CheckCircleIcon     from '@mui/icons-material/CheckCircle'
 import ThumbDownIcon       from '@mui/icons-material/ThumbDown'
 import SendIcon            from '@mui/icons-material/Send'
 import dayjs from 'dayjs'
-import { useAuthStore } from '@/store/auth.store'
+import { useCurrentUser } from '@/components/auth/UserProvider'
 import { useCampaignStore } from '@/store/campaign.store'
 import { useCampaigns } from '@/hooks/useCampaigns'
 import {
@@ -28,7 +28,7 @@ const ICONO: Record<NotificationTipo, React.ReactNode> = {
 interface Props { anchorEl: HTMLElement | null; onClose: () => void }
 
 export function NotificationsMenu({ anchorEl, onClose }: Props) {
-  const currentUser = useAuthStore((s) => s.currentUser)
+  const currentUser = useCurrentUser()
   const { data: notifications } = useNotifications()
   const { data: campaigns } = useCampaigns()
   const { setSelectedCampaign, setDetailOpen } = useCampaignStore()

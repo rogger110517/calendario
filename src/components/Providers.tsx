@@ -7,6 +7,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SnackbarProvider } from 'notistack'
 import { theme } from '@/lib/theme'
+import { UserProvider } from '@/components/auth/UserProvider'
 import 'dayjs/locale/es'
 
 function makeQueryClient() {
@@ -27,7 +28,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <CssBaseline />
         <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
           <SnackbarProvider maxSnack={3} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-            {children}
+            <UserProvider>{children}</UserProvider>
           </SnackbarProvider>
         </LocalizationProvider>
       </ThemeProvider>

@@ -9,7 +9,6 @@ import { dvList } from './client'
 import { ESTADO_CAMPANA_REVERSE, TIPO_RECURRENCIA_REVERSE } from './campaign.options'
 import { UnidadRepository } from '@/lib/repositories/unidad.repository'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
-import { UserRepository } from '@/lib/repositories/user.repository'
 import type { Campaign } from '@/types'
 
 const ENTITY_SET = 'cre47_comunicaciondecampanas'
@@ -88,10 +87,9 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
     else grupos.set(campaignId, [row])
   }
 
-  const [unidades, dealers, users] = await Promise.all([
+  const [unidades, dealers] = await Promise.all([
     UnidadRepository.findAll(),
     DealerRepository.findAll(),
-    UserRepository.findAll(),
   ])
 
   const campaigns: Campaign[] = []
@@ -104,9 +102,6 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
 
     const unidad = unidades.find((u) => u.nombre === first.cre47_unidaddenegocio)
     const dealer = dealers.find((d) => d.nombre === first.cre47_nombredelconcesionario)
-    const solicitante = first.cre47_correodelsolicitante
-      ? users.find((u) => u.correo === first.cre47_correodelsolicitante)
-      : undefined
 
     campaigns.push({
       id: campaignId,
@@ -127,7 +122,8 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
       fechasRecurrencia,
       linkOneDrive: first.cre47_urldelarchivoadjunto ?? undefined,
       comentarios: first.cre47_comentarios ?? undefined,
-      solicitante: solicitante?.id ?? '',
+      // solicitante = correo directamente (Easy Auth, sin catálogo local de usuarios).
+      solicitante: first.cre47_correodelsolicitante ?? '',
       fechaRegistro: first.cre47_fechaderegistrodelacampana,
       estado: ESTADO_CAMPANA_REVERSE[first.cre47_estadodelacampana] ?? 'Pendiente',
     })

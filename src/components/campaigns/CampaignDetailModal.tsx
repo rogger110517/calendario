@@ -20,7 +20,7 @@ import BusinessIcon      from '@mui/icons-material/Business'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { ConfirmDialog }    from '@/components/common/ConfirmDialog'
 import { useCampaignStore } from '@/store/campaign.store'
-import { useAuthStore }     from '@/store/auth.store'
+import { useCurrentUser }   from '@/components/auth/UserProvider'
 import { useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns'
 import { useUnidades }       from '@/hooks/useUnidades'
 import { useSnackbar } from 'notistack'
@@ -76,7 +76,7 @@ function LabeledValue({ label, children }: { label: string; children: React.Reac
 export function CampaignDetailModal({ open, onClose }: Props) {
   const campaign       = useCampaignStore((s) => s.selectedCampaign)
   const setSelected    = useCampaignStore((s) => s.setSelectedCampaign)
-  const currentUser    = useAuthStore((s) => s.currentUser)
+  const currentUser    = useCurrentUser()
   const updateCampaign = useUpdateCampaign()
   const deleteCampaign = useDeleteCampaign()
   const { data: unidades } = useUnidades()

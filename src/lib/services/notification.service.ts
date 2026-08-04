@@ -1,5 +1,5 @@
 import { NotificationRepository } from '@/lib/repositories/notification.repository'
-import { UserRepository } from '@/lib/repositories/user.repository'
+import { ADMIN_EMAILS } from '@/lib/auth/roles'
 import type { Campaign, Notification, NotificationTipo } from '@/types'
 import dayjs from 'dayjs'
 
@@ -23,12 +23,10 @@ export const NotificationService = {
     return NotificationRepository.markAllAsRead(userId)
   },
 
-  /** Notifica a todos los administradores que hay una campaña nueva por aprobar */
+  /** Notifica a todos los administradores (lista fija, ver src/lib/auth/roles.ts) que hay una campaña nueva por aprobar */
   async notificarNuevaCampana(campaign: Campaign): Promise<void> {
-    const usuarios = await UserRepository.findAll()
-    const admins = usuarios.filter((u) => u.rol === 'admin')
-    await Promise.all(admins.map((admin) => NotificationRepository.create({
-      userId:     admin.id,
+    await Promise.all(ADMIN_EMAILS.map((correoAdmin) => NotificationRepository.create({
+      userId:     correoAdmin,
       campaignId: campaign.id,
       tipo:       'PENDIENTE_APROBACION',
       mensaje:    MENSAJES.PENDIENTE_APROBACION(campaign),

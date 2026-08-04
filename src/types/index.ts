@@ -1,8 +1,11 @@
 // ─── User ──────────────────────────────────────────────────────────────────
-export type UserRole = 'admin' | 'editor' | 'viewer'
+// Autenticación vía Azure App Service Easy Auth (Entra ID) — ver
+// src/lib/auth/roles.ts. Solo 2 roles: admin (lista fija de correos) y
+// colaborador (cualquier otro usuario autenticado).
+export type UserRole = 'admin' | 'colaborador'
 
 export interface User {
-  id: string
+  id: string             // = correo (Easy Auth no da un id local propio)
   nombre: string
   correo: string
   rol: UserRole

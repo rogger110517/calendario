@@ -16,7 +16,7 @@ import { z } from 'zod'
 import { useSnackbar } from 'notistack'
 import dayjs from 'dayjs'
 import { useCampaignStore }   from '@/store/campaign.store'
-import { useAuthStore }      from '@/store/auth.store'
+import { useCurrentUser }    from '@/components/auth/UserProvider'
 import { useCreateCampaign, useValidateSimilar, useValidarReglas } from '@/hooks/useCampaigns'
 import { useDealers }        from '@/hooks/useDealers'
 import { useUnidades }       from '@/hooks/useUnidades'
@@ -60,7 +60,7 @@ interface Props { open: boolean; onClose: () => void }
 
 export function CampaignFormModal({ open, onClose }: Props) {
   const { newCampaignDate, myUnidad } = useCampaignStore()
-  const currentUser         = useAuthStore((s) => s.currentUser)
+  const currentUser         = useCurrentUser()
   const { enqueueSnackbar } = useSnackbar()
 
   const [similarWarning,   setSimilarWarning]   = useState(false)

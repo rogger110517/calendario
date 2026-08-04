@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import {
   AppBar, Toolbar, Typography, Box, Avatar, Chip,
   IconButton, Tooltip, Divider, Menu, MenuItem,
@@ -10,36 +9,30 @@ import {
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined'
 import MenuBookIcon              from '@mui/icons-material/MenuBook'
 import LogoutIcon                from '@mui/icons-material/Logout'
-import SwitchAccountIcon         from '@mui/icons-material/SwitchAccount'
-import { useAuthStore }          from '@/store/auth.store'
+import { useCurrentUser }        from '@/components/auth/UserProvider'
+import { UserProfile }           from '@/components/auth/UserProfile'
 import { ManualUsuarioModal }    from '@/components/common/ManualUsuarioModal'
 import { NotificationsMenu }     from '@/components/layout/NotificationsMenu'
 import { useNotifications }      from '@/hooks/useNotifications'
+
+const EASY_AUTH_LOGOUT_URL = '/.auth/logout?post_logout_redirect_uri=/'
 
 function getInitials(name: string) {
   return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 }
 
 const ROL_LABEL: Record<string, string> = {
-  admin:  'Admin',
-  editor: 'Colaborador',
-  viewer: 'Visor',
+  admin: 'Admin',
+  colaborador: 'Colaborador',
 }
 
 export function AppHeader() {
-  const { currentUser, logout } = useAuthStore()
-  const router  = useRouter()
+  const currentUser = useCurrentUser()
   const [anchor,       setAnchor]       = useState<null | HTMLElement>(null)
   const [manualOpen,   setManualOpen]   = useState(false)
   const [notifAnchor,  setNotifAnchor]  = useState<null | HTMLElement>(null)
   const { data: notifications } = useNotifications()
   const unreadCount = notifications?.filter((n) => !n.leida).length ?? 0
-
-  const handleLogout = () => {
-    setAnchor(null)
-    logout()
-    router.replace('/login')
-  }
 
   return (
     <>
@@ -98,7 +91,7 @@ export function AppHeader() {
 
           <Divider orientation="vertical" flexItem sx={{ borderColor: 'rgba(255,255,255,0.25)', mx: 0.5 }} />
 
-          {/* Usuario */}
+          {/* Usuario (correo autenticado vía Easy Auth) */}
           {currentUser && (
             <Box display="flex" alignItems="center" gap={1}>
               <Box textAlign="right" sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -140,19 +133,9 @@ export function AppHeader() {
           slotProps={{ paper: { elevation: 3, sx: { mt: 0.5, minWidth: 230, borderRadius: 2 } } }}
         >
           <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #dee2e6' }}>
-            <Typography variant="body2" fontWeight={700}>{currentUser?.nombre}</Typography>
-            <Typography variant="caption" color="text.secondary">{currentUser?.correo}</Typography>
-            <Box mt={0.75}>
-              <Chip label={ROL_LABEL[currentUser?.rol ?? ''] ?? currentUser?.rol} size="small"
-                sx={{ height: 18, fontSize: '0.65rem', fontWeight: 700, bgcolor: '#E40521', color: '#fff' }} />
-            </Box>
+            <UserProfile />
           </Box>
-          <MenuItem onClick={handleLogout} sx={{ gap: 1.5, py: 1.25 }}>
-            <ListItemIcon><SwitchAccountIcon fontSize="small" /></ListItemIcon>
-            <ListItemText primary="Cambiar cuenta" primaryTypographyProps={{ variant: 'body2' }} />
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleLogout} sx={{ gap: 1.5, py: 1.25, color: 'error.main' }}>
+          <MenuItem component="a" href={EASY_AUTH_LOGOUT_URL} sx={{ gap: 1.5, py: 1.25, color: 'error.main' }}>
             <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon>
             <ListItemText primary="Cerrar sesión" primaryTypographyProps={{ variant: 'body2', color: 'error' }} />
           </MenuItem>

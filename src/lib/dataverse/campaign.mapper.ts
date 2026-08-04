@@ -9,7 +9,7 @@
  * envío). Ver src/DESPLIEGUE_DATAVERSE.md.
  */
 import dayjs from 'dayjs'
-import type { Campaign, Dealer, Unidad, User } from '@/types'
+import type { Campaign, Dealer, Unidad } from '@/types'
 import {
   CANAL_ENVIO_OPTIONS,
   ESTADO_CAMPANA_OPTIONS,
@@ -22,7 +22,6 @@ export function mapCampaignLevelFields(
   campaign: Campaign,
   dealer: Dealer | null,
   unidad: Unidad | null,
-  solicitante: User | null,
   totalOcurrencias: number,
 ) {
   return {
@@ -44,7 +43,8 @@ export function mapCampaignLevelFields(
     cre47_cantidadtotaldecomunicaciones: totalOcurrencias,
     cre47_urldelarchivoadjunto: campaign.linkOneDrive ?? '',
     cre47_comentarios: campaign.comentarios ?? '',
-    cre47_correodelsolicitante: solicitante?.correo ?? '',
+    // campaign.solicitante ya es el correo (Easy Auth, sin catálogo local de usuarios).
+    cre47_correodelsolicitante: campaign.solicitante,
     // fechaRegistro ya es un ISO datetime con offset real (dayjs().toISOString()
     // en campaign.service.ts) — no pasa por limaAUtc.
     cre47_fechaderegistrodelacampana: campaign.fechaRegistro,
