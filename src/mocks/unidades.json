@@ -1,8 +1,14 @@
 [
-  { "id": "und-001", "nombre": "Ventas",              "color": "#1565C0" },
-  { "id": "und-002", "nombre": "Marketing",            "color": "#7B1FA2" },
-  { "id": "und-003", "nombre": "Operaciones",          "color": "#00695C" },
-  { "id": "und-004", "nombre": "Fuerza de Ventas",     "color": "#E65100" },
-  { "id": "und-005", "nombre": "Cobranzas",            "color": "#4527A0" },
-  { "id": "und-006", "nombre": "Customer Experience",  "color": "#AD1457" }
+  { "id": "und-001", "nombre": "Canal Digital",                  "color": "#0E7490" },
+  { "id": "und-002", "nombre": "Proyectos y Nuevos Negocios",    "color": "#4338CA" },
+  { "id": "und-003", "nombre": "Ventas",                          "color": "#1E3A8A" },
+  { "id": "und-004", "nombre": "Seguros",                         "color": "#7C3AED" },
+  { "id": "und-005", "nombre": "Marketing",                       "color": "#A21CAF" },
+  { "id": "und-006", "nombre": "Infraestructura y Operaciones",  "color": "#0F766E" },
+  { "id": "und-007", "nombre": "Proyectos SDP",                   "color": "#C2410C" },
+  { "id": "und-008", "nombre": "Judicial SDP",                    "color": "#78350F" },
+  { "id": "und-009", "nombre": "Retención y Omnicanalidad",      "color": "#BE185D" },
+  { "id": "und-010", "nombre": "Fidelización y CRM",             "color": "#4D7C0F" },
+  { "id": "und-011", "nombre": "Estrategia e Insights",           "color": "#334155" },
+  { "id": "und-012", "nombre": "Riesgo de Crédito",              "color": "#991B1B" }
 ]
