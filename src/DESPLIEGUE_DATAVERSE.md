@@ -230,3 +230,62 @@ clave alternativa exige un valor único por fila. Calculado en
    confirmar que `cre47_estadodelacampana` se actualiza en **todas** las
    filas de esa campaña (no crea filas nuevas, no toca
    `cre47_estadodelenvio`).
+
+## 9. Dataverse como fuente de verdad para lectura (2026-08-04)
+
+**Problema que resuelve:** antes, el calendario leía las campañas de un
+array en memoria que corría **en el navegador** (`CampaignRepository`,
+importado directo por componentes cliente) — se perdía al refrescar la
+página y no se compartía entre navegadores/pestañas. Solo la escritura
+pasaba por el servidor.
+
+**Solución:** el calendario ahora lee de Dataverse vía el servidor.
+
+```
+src/lib/dataverse/campaign-dataverse.reader.ts
+  fetchCampaignsFromDataverse()
+    → dvList() trae todas las filas de cre47_comunicaciondecampanas
+    → agrupa por campaignId (prefijo de cre47_campanaid, quitando "-YYYY-MM-DD")
+    → reconstruye cada Campaign: convierte fechas UTC → hora de Lima
+      (aritmética nativa con Date, sin depender del huso del servidor),
+      resuelve unidad/dealer/solicitante por nombre/correo contra los
+      catálogos locales (Unidad/Dealer/User siguen siendo JSON — son
+      catálogos, no datos de campaña, no tienen el problema de origen)
+
+src/app/api/campaigns/route.ts (GET)
+  → llama fetchCampaignsFromDataverse()
+
+src/hooks/useCampaigns.ts
+  useCampaigns() → fetch('/api/campaigns') en vez de CampaignService.getAll()
+```
+
+**Escritura ajustada para mantener consistencia lectura/escritura:**
+- `syncCampaignToDataverse()` ya no es "fire and forget" — se espera
+  (`await`), porque si el `invalidateQueries` del create/update dispara el
+  refetch antes de que Dataverse tenga el dato, la campaña "desaparecería"
+  un instante.
+- `CampaignService.update()` y `.delete()` ahora reciben la `Campaign`
+  **completa** (no solo el `id`) — porque la campaña puede no existir en
+  la memoria local de esa pestaña (se pudo haber creado en otro
+  navegador). El patch se aplica sobre el objeto recibido, no sobre una
+  búsqueda local que podría fallar.
+- **Eliminar ahora también borra en Dataverse**
+  (`CampaignDataverseService.deleteCampaign()`) — si no, la campaña
+  "eliminada" reaparecería en el siguiente refresh porque seguiría
+  existiendo en la fuente de verdad.
+
+**Validado con datos reales:** se creó una campaña de prueba de 2 filas
+(recurrente, `Semanal`) contra QA, se confirmó que la agrupación por
+`cre47_campanaid`, el cálculo de `fechasRecurrencia` (todas las fechas
+menos `diaEnvio`), y la resolución de `unidad`/`solicitante` por
+nombre/correo reconstruyen el objeto `Campaign` correctamente. Filas de
+prueba borradas al terminar.
+
+**Pendiente / gap conocido:** `CampaignService.validarReglas()` (máximo 2
+comunicaciones por día, mismo público objetivo) todavía valida contra la
+memoria local (`CampaignRepository.findAll()`), no contra Dataverse. Dos
+usuarios en dos navegadores distintos podrían cada uno crear hasta 2
+campañas el mismo día sin que la regla vea las del otro (hasta 4 en total,
+no 2). Si esto importa para el flujo real, hay que mover también esa
+validación a leer de Dataverse — no se hizo en este pase para no ampliar
+más el alcance del cambio.

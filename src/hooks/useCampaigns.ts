@@ -4,10 +4,18 @@ import type { Campaign, CampaignFormData, User } from '@/types'
 
 export const CAMPAIGNS_KEY = ['campaigns'] as const
 
+/** Dataverse es la fuente de verdad — se lee vía el servidor (/api/campaigns), no de memoria local. */
+async function fetchCampaigns(): Promise<Campaign[]> {
+  const res = await fetch('/api/campaigns')
+  const json = (await res.json()) as { data: Campaign[]; success: boolean }
+  if (!json.success) throw new Error('Error al obtener campañas')
+  return json.data
+}
+
 export function useCampaigns() {
   return useQuery({
     queryKey: CAMPAIGNS_KEY,
-    queryFn:  () => CampaignService.getAll(),
+    queryFn:  fetchCampaigns,
     staleTime: 30_000,
   })
 }
@@ -32,8 +40,8 @@ export function useCreateCampaign() {
 export function useUpdateCampaign() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Campaign> }) =>
-      CampaignService.update(id, data),
+    mutationFn: ({ campaign, data }: { campaign: Campaign; data: Partial<Campaign> }) =>
+      CampaignService.update(campaign, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: CAMPAIGNS_KEY }),
   })
 }
@@ -41,7 +49,7 @@ export function useUpdateCampaign() {
 export function useDeleteCampaign() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: string) => CampaignService.delete(id),
+    mutationFn: (campaign: Campaign) => CampaignService.delete(campaign),
     onSuccess: () => qc.invalidateQueries({ queryKey: CAMPAIGNS_KEY }),
   })
 }

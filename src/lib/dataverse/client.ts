@@ -107,3 +107,21 @@ export async function dvUpsert(entitySet: string, keyField: string, keyValue: st
   const safeValue = keyValue.replace(/'/g, "''")
   await dvFetch(`/${entitySet}(${keyField}='${safeValue}')`, { method: 'PATCH', body: JSON.stringify(body) })
 }
+
+/** Borra una fila por clave alternativa. No lanza si ya no existía (404). */
+export async function dvDelete(entitySet: string, keyField: string, keyValue: string): Promise<void> {
+  const safeValue = keyValue.replace(/'/g, "''")
+  try {
+    await dvFetch(`/${entitySet}(${keyField}='${safeValue}')`, { method: 'DELETE' })
+  } catch (err) {
+    if (!(err instanceof Error) || !err.message.includes('404')) throw err
+  }
+}
+
+/** Lista filas de un entity set con $select opcional. */
+export async function dvList<T>(entitySet: string, select: string[]): Promise<T[]> {
+  const query = select.length ? `?$select=${select.join(',')}` : ''
+  const res = await dvFetch(`/${entitySet}${query}`, { method: 'GET' })
+  const json = (await res.json()) as { value: T[] }
+  return json.value
+}

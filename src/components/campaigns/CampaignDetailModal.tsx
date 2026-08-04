@@ -94,7 +94,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
 
   const ejecutarCambio = async (accion: Accion) => {
     try {
-      await updateCampaign.mutateAsync({ id: campaign.id, data: { estado: accion.nuevoEstado } })
+      await updateCampaign.mutateAsync({ campaign, data: { estado: accion.nuevoEstado } })
       setSelected({ ...campaign, estado: accion.nuevoEstado })
       enqueueSnackbar(`Campaña actualizada a: ${accion.nuevoEstado}`, { variant: 'success' })
       if (['Rechazada', 'Cancelada'].includes(accion.nuevoEstado)) onClose()
@@ -112,7 +112,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
 
   const handleEliminar = async () => {
     try {
-      await deleteCampaign.mutateAsync(campaign.id)
+      await deleteCampaign.mutateAsync(campaign)
       enqueueSnackbar('Campaña eliminada', { variant: 'success' })
       onClose()
     } catch {

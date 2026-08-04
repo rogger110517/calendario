@@ -40,3 +40,11 @@ export const ESTADO_ENVIO_OPTIONS: Record<CommunicationEstado, number> = {
   Error: 333900003,
   Cancelado: 333900004,
 }
+
+function invert<T extends string>(obj: Record<T, number>): Record<number, T> {
+  return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v as number, k])) as Record<number, T>
+}
+
+/** Mapas inversos — para reconstruir Campaign a partir de filas de Dataverse (lectura). */
+export const ESTADO_CAMPANA_REVERSE = invert(ESTADO_CAMPANA_OPTIONS)
+export const TIPO_RECURRENCIA_REVERSE = invert(TIPO_RECURRENCIA_OPTIONS)

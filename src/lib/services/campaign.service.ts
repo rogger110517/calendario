@@ -7,10 +7,13 @@ import dayjs from 'dayjs'
 /**
  * Sincroniza la campaña contra Dataverse vía el Route Handler
  * /api/dataverse/sync-campaign (las credenciales viven solo en el server).
- * Best-effort: si falla (Dataverse mal configurado, sin credenciales
- * todavía, etc.) no interrumpe el flujo local — solo queda logueado.
+ * Se espera (no es "fire and forget"): como el calendario ahora LEE de
+ * Dataverse (ver src/DESPLIEGUE_DATAVERSE.md sección 8), hay que esperar a
+ * que el sync termine antes de invalidar/refrescar la lista, si no el
+ * refetch podría llegar antes de que el dato exista en Dataverse.
+ * Best-effort igual: si falla, no interrumpe el flujo — solo queda logueado.
  */
-async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'update'): Promise<void> {
+async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'update' | 'delete'): Promise<void> {
   try {
     await fetch('/api/dataverse/sync-campaign', {
       method: 'POST',
@@ -127,22 +130,30 @@ export const CampaignService = {
     }
     const campaign = await CampaignRepository.create(payload)
     await NotificationService.notificarNuevaCampana(campaign)
-    void syncCampaignToDataverse(campaign, 'create')
+    await syncCampaignToDataverse(campaign, 'create')
     return campaign
   },
 
-  async update(id: string, data: Partial<Campaign>): Promise<Campaign | null> {
-    const anterior = await CampaignRepository.findById(id)
-    const campaign = await CampaignRepository.update(id, data)
-    if (campaign && data.estado && data.estado !== anterior?.estado) {
-      await NotificationService.notificarCambioEstado(campaign)
-      void syncCampaignToDataverse(campaign, 'update')
+  /**
+   * Recibe la Campaign completa (no solo el id): como la lista viene de
+   * Dataverse, la campaña puede no existir en la memoria local de esta
+   * pestaña (por ejemplo, se creó en otro navegador) — mezclamos el patch
+   * sobre el objeto recibido en vez de depender de encontrarla localmente.
+   */
+  async update(campaign: Campaign, data: Partial<Campaign>): Promise<Campaign> {
+    const actualizada = { ...campaign, ...data }
+    await CampaignRepository.update(campaign.id, data).catch(() => null) // best-effort, cache local
+    if (data.estado && data.estado !== campaign.estado) {
+      await NotificationService.notificarCambioEstado(actualizada)
+      await syncCampaignToDataverse(actualizada, 'update')
     }
-    return campaign
+    return actualizada
   },
 
-  async delete(id: string): Promise<boolean> {
-    return CampaignRepository.delete(id)
+  async delete(campaign: Campaign): Promise<boolean> {
+    await CampaignRepository.delete(campaign.id).catch(() => false) // best-effort, cache local
+    await syncCampaignToDataverse(campaign, 'delete')
+    return true
   },
 
   async validateSimilar(nombreCampana: string, subject: string): Promise<Campaign[]> {

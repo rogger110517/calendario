@@ -10,10 +10,12 @@ import type { Campaign } from '@/types'
  * campos se mandan (ver CampaignDataverseService).
  */
 export async function POST(req: NextRequest) {
-  const { campaign, mode } = (await req.json()) as { campaign: Campaign; mode: 'create' | 'update' }
+  const { campaign, mode } = (await req.json()) as { campaign: Campaign; mode: 'create' | 'update' | 'delete' }
 
   if (mode === 'update') {
     await CampaignDataverseService.syncOnUpdate(campaign)
+  } else if (mode === 'delete') {
+    await CampaignDataverseService.deleteCampaign(campaign)
   } else {
     await CampaignDataverseService.syncOnCreate(campaign)
   }

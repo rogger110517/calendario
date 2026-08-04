@@ -1,4 +1,4 @@
-import { dvUpsert } from './client'
+import { dvDelete, dvUpsert } from './client'
 import { fechasDeEnvio, idExterno, mapCampaignLevelFields, mapOcurrenciaFields } from './campaign.mapper'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
 import { UnidadRepository } from '@/lib/repositories/unidad.repository'
@@ -56,6 +56,21 @@ export const CampaignDataverseService = {
       )
     } catch (err) {
       console.error('[Dataverse] No se pudo actualizar la campaña', err)
+    }
+  },
+
+  /**
+   * Borra todas las filas de la campaña (una por fecha de envío). Como
+   * Dataverse ahora es la fuente de verdad para lectura, si esto falla la
+   * campaña "eliminada" volvería a aparecer en el próximo refresh. No
+   * lanza: solo loguea.
+   */
+  async deleteCampaign(campaign: Campaign): Promise<void> {
+    try {
+      const fechas = fechasDeEnvio(campaign)
+      await Promise.all(fechas.map((fecha) => dvDelete(ENTITY_SET, KEY_FIELD, idExterno(campaign, fecha))))
+    } catch (err) {
+      console.error('[Dataverse] No se pudo eliminar la campaña', err)
     }
   },
 }

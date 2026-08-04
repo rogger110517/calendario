@@ -1,21 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { CampaignRepository } from '@/lib/repositories/campaign.repository'
+import { NextResponse } from 'next/server'
+import { fetchCampaignsFromDataverse } from '@/lib/dataverse/campaign-dataverse.reader'
 
+/** Dataverse es la fuente de verdad para lectura — no la memoria local del navegador. */
 export async function GET() {
   try {
-    const campaigns = await CampaignRepository.findAll()
+    const campaigns = await fetchCampaignsFromDataverse()
     return NextResponse.json({ data: campaigns, success: true })
-  } catch {
+  } catch (err) {
+    console.error('[Dataverse] Error listando campañas', err)
     return NextResponse.json({ success: false, message: 'Error fetching campaigns' }, { status: 500 })
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json()
-    const campaign = await CampaignRepository.create(body)
-    return NextResponse.json({ data: campaign, success: true }, { status: 201 })
-  } catch {
-    return NextResponse.json({ success: false, message: 'Error creating campaign' }, { status: 500 })
   }
 }
