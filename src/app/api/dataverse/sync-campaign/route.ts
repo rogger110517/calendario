@@ -5,16 +5,18 @@ import type { Campaign } from '@/types'
 /**
  * Único punto donde se usan las credenciales DATAVERSE_* — corre en el
  * servidor. El cliente (CampaignService) llama a este endpoint en vez de
- * hablarle a Dataverse directamente.
+ * hablarle a Dataverse directamente. El upsert por cre47_campanaid hace
+ * innecesario rastrear GUIDs: "create" y "update" solo difieren en qué
+ * campos se mandan (ver CampaignDataverseService).
  */
 export async function POST(req: NextRequest) {
-  const { campaign } = (await req.json()) as { campaign: Campaign }
+  const { campaign, mode } = (await req.json()) as { campaign: Campaign; mode: 'create' | 'update' }
 
-  if (campaign.dataverseIds && campaign.dataverseIds.length > 0) {
-    await CampaignDataverseService.syncOnUpdate(campaign.dataverseIds, campaign)
-    return NextResponse.json({ dataverseIds: campaign.dataverseIds })
+  if (mode === 'update') {
+    await CampaignDataverseService.syncOnUpdate(campaign)
+  } else {
+    await CampaignDataverseService.syncOnCreate(campaign)
   }
 
-  const dataverseIds = await CampaignDataverseService.syncOnCreate(campaign)
-  return NextResponse.json({ dataverseIds })
+  return NextResponse.json({ ok: true })
 }

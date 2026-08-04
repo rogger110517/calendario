@@ -88,30 +88,30 @@ después (al aprobar/rechazar) sin crear filas duplicadas.
 
 ```
 src/lib/dataverse/
-├── client.ts                      ← auth OAuth2 ROPC (usuario/contraseña) + fetch genérico (dvCreate/dvUpdate)
-├── campaign.options.ts            ← valores numéricos de los Picklist (PLACEHOLDER, ver pendientes)
-├── campaign.mapper.ts             ← separa campos "de campaña" vs "de ocurrencia"
-└── campaign-dataverse.service.ts  ← resuelve Dealer/Unidad/User, crea N filas o actualiza N filas
+├── client.ts                      ← auth OAuth2 ROPC (usuario/contraseña) + fetch genérico (dvUpsert, principal)
+├── campaign.options.ts            ← valores numéricos de los Picklist (confirmados en QA, ver sección 6)
+├── campaign.mapper.ts             ← separa campos "de campaña" vs "de ocurrencia" + idExterno() (cre47_campanaid)
+└── campaign-dataverse.service.ts  ← resuelve Dealer/Unidad/User, hace upsert de N filas
 
 src/app/api/dataverse/sync-campaign/route.ts   ← único lugar donde corren las
                                                    credenciales (server-side)
 ```
 
-Flujo:
+Flujo (ver sección 7 para el detalle de idempotencia):
 
 1. **Crear campaña** (`CampaignService.create()`): se crea localmente como
-   siempre, y además se llama `syncCampaignToDataverse(campaign)` →
-   `POST /api/dataverse/sync-campaign` → `CampaignDataverseService.syncOnCreate()`
-   → crea **una fila por cada fecha** de `[diaEnvio, ...fechasRecurrencia]`
-   → devuelve los GUIDs, que se guardan en `campaign.dataverseIds` vía
-   `CampaignRepository.update()`.
+   siempre, y además se llama `syncCampaignToDataverse(campaign, 'create')`
+   → `POST /api/dataverse/sync-campaign` →
+   `CampaignDataverseService.syncOnCreate()` → upsert de **una fila por
+   cada fecha** de `[diaEnvio, ...fechasRecurrencia]`, cada una con su
+   `cre47_campanaid` único (`campaignId-fecha`).
 2. **Aprobar / Rechazar** (`CampaignService.update()`, cuando cambia
-   `estado`): llama al mismo endpoint, que esta vez detecta
-   `campaign.dataverseIds` ya presente → `syncOnUpdate()` → hace `PATCH`
-   solo de los **campos de campaña** (sección 3, primera tabla) en **todas**
-   las filas de esa campaña. No toca `cre47_estadodelenvio` /
-   `cre47_fecharealdeenvio` / `cre47_mensajedeerror` — esos quedan
-   reservados para que los actualice el flujo de Power Automate.
+   `estado`): llama al mismo endpoint con `mode: 'update'` →
+   `syncOnUpdate()` → upsert solo de los **campos de campaña** (sección 3,
+   primera tabla) en **todas** las filas de esa campaña, recalculando las
+   mismas claves. No toca `cre47_estadodelenvio` / `cre47_fecharealdeenvio`
+   / `cre47_mensajedeerror` — esos quedan reservados para que los
+   actualice el flujo de Power Automate.
 
 **Diseño "best-effort":** todo el sync está en `try/catch`, nunca lanza — si
 Dataverse no responde o rechaza el login, la campaña se crea/actualiza igual
@@ -163,59 +163,55 @@ las sobreescribe sin tocar código.
       la alternativa sería client_credentials con Application User (lo que
       se implementó originalmente antes de este cambio).
 
-## 7. Pendiente (diseño) — Idempotencia con Alternate Key
+## 7. Idempotencia — IMPLEMENTADO con `cre47_campanaid` (Alternate Key)
 
-**El problema hoy:** cada fila creada en Dataverse recibe un GUID nuevo, que
-se guarda de vuelta en `campaign.dataverseIds` (en memoria, vía
-`CampaignRepository.update`). Si ese guardado no llega a pasar — el proceso
-se reinicia, el store en memoria se pierde (pasa en cada redeploy, porque
-hoy `CampaignRepository` es JSON en memoria, no una base real) — la próxima
-sincronización no tiene forma de saber que esa fila ya existe, y
-`syncOnCreate()` la vuelve a crear: **fila duplicada**. El ID que "viaja"
-hoy es el que genera Dataverse, no uno propio y determinístico.
+En vez de la columna `cre47_idexterno` que se había planeado originalmente,
+el usuario ya tenía/creó una columna de texto propia,
+**`cre47_campanaid`**, y la registró como **clave alternativa** en Power
+Apps. Se usó esa directamente (no hizo falta crear una columna nueva).
 
-**La solución: Alternate Key + upsert.** En vez de depender de recordar el
-GUID que devuelve Dataverse, se agrega una clave alternativa con un ID
-propio y reproducible (`campaignId + fecha`), y cada sync hace `PATCH`
-contra esa clave. Dataverse resuelve el upsert solo: crea si no existe,
-actualiza si existe — sin duplicar, sin importar si se perdió el estado
-local.
+**Valor guardado:** `campaignId + '-' + fecha` (ej.
+`cmp-1735000000000-2026-08-10`) — **no** solo `campaignId`, porque el
+diseño genera varias filas por campaña (una por fecha de envío) y una
+clave alternativa exige un valor único por fila. Calculado en
+`idExterno()` (`campaign.mapper.ts`).
 
-### Qué crear en Power Apps (antes de tocar código)
+**Cómo quedó el código:**
 
-1. **Tablas → `cre47_comunicaciondecampana` → Columnas → Nueva columna**
-   - Nombre para mostrar: `Id externo`
-   - Nombre lógico resultante: `cre47_idexterno`
-   - Tipo de dato: **Texto** (100 caracteres), no requerido.
-2. **Tablas → `cre47_comunicaciondecampana` → Claves (Keys) → Nueva clave
-   alternativa**
-   - Seleccionar la columna `cre47_idexterno` → Guardar.
-   - Dataverse construye el índice en segundo plano — puede tardar unos
-     minutos antes de que la clave quede activa (columna "Estado" pasa de
-     "Activo (compilando índice)" a "Activo").
+- `client.ts` → `dvUpsert(entitySet, keyField, keyValue, body)`: hace
+  `PATCH /{entitySet}(<keyField>='<keyValue>')` — sintaxis de upsert por
+  alternate key de la Web API. Escapa comillas simples en el valor
+  (`'` → `''`, regla de escape de OData).
+- `campaign.mapper.ts` → `idExterno(campaign, fecha)` calcula la clave;
+  `mapOcurrenciaFields()` la incluye como `cre47_campanaid`.
+- `campaign-dataverse.service.ts`:
+  - `syncOnCreate(campaign)` — upsert con el body **completo** (campos de
+    campaña + de ocurrencia) por cada fecha.
+  - `syncOnUpdate(campaign)` — upsert solo con los **campos de campaña**
+    (no toca `cre47_estadodelenvio`/`cre47_fecharealdeenvio`/
+    `cre47_mensajedeerror`, reservados para Power Automate). Si por algún
+    motivo la fila no existía todavía, esto la crearía incompleta (sin
+    campos de ocurrencia) — caso borde aceptado, poco probable en la
+    práctica.
+  - Ya **no rastrea GUIDs**: `Campaign.dataverseIds` se eliminó de
+    `src/types/index.ts` — no hace falta, la clave siempre se puede
+    recalcular a partir de `campaignId + fecha`.
+- `api/dataverse/sync-campaign/route.ts` recibe `{ campaign, mode: 'create' | 'update' }`
+  en vez de inferir el modo a partir de `dataverseIds`.
 
-### Cómo quedaría el código (una vez creada la clave, no implementado aún)
-
-- `mapOcurrenciaFields()` (`campaign.mapper.ts`) agrega
-  `cre47_idexterno: `${campaign.id}-${fecha}`` a cada fila.
-- `client.ts` suma una función `dvUpsert(entitySet, keyField, keyValue, body)`
-  que hace `PATCH /{entitySet}(<keyField>='<keyValue>')` — la sintaxis de
-  upsert por alternate key de la Dataverse Web API.
-- `campaign-dataverse.service.ts` deja de distinguir "crear" vs "actualizar"
-  por `dataverseIds` — cada llamada a `syncCampaign(campaign)` simplemente
-  hace upsert de todas las filas de esa campaña por su `cre47_idexterno`
-  calculado. Esto simplifica el flujo: **ya no hace falta rastrear
-  `dataverseIds` en memoria en absoluto** — se puede quitar ese campo de
-  `Campaign` (`src/types/index.ts`) y de `CampaignRepository`.
-- Se llama igual en los mismos 2 puntos que hoy (crear, y cambio de
-  `estado` en aprobar/rechazar) — **no se necesita ningún campo nuevo para
-  aprobar/rechazar en sí**, `cre47_estadodelacampana` ya cubre eso. El único
-  campo nuevo es `cre47_idexterno`, y es exclusivamente para resolver la
-  idempotencia del sync, no para el flujo de negocio.
-
-Avísame cuando crees la columna + la clave alternativa en Power Apps y
-confirmes que el índice ya quedó "Activo" — ahí implemento los cambios de
-código de esta sección.
+**Validado en QA (2026-08-03)**, contra la tabla real, no solo localmente:
+1. Confirmado que `cre47_campanaid` es tipo `String` (no un Autonumber real
+   de Dataverse pese al nombre "autoenumeración") — controlado 100% por el
+   código.
+2. Confirmado el índice de la clave alternativa en estado `Active`
+   (`GET .../Keys`).
+3. `PATCH` con una clave que no existía → creó la fila (`204`).
+4. Mismo `PATCH` repetido con la misma clave, cambiando
+   `cre47_estadodelacampana` → **no duplicó**, actualizó la fila existente
+   (confirmado con `GET` filtrando por `cre47_campanaid`: 1 sola fila, con
+   el valor nuevo).
+5. Fila de prueba borrada al terminar (`DELETE` también funciona por
+   alternate key).
 
 ## 8. Cómo probar en QA ahora mismo
 

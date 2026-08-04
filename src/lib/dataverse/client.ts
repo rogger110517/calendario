@@ -98,3 +98,12 @@ export async function dvCreate(entitySet: string, body: object): Promise<string>
 export async function dvUpdate(entitySet: string, id: string, body: object): Promise<void> {
   await dvFetch(`/${entitySet}(${id})`, { method: 'PATCH', body: JSON.stringify(body) })
 }
+
+/**
+ * Crea o actualiza por clave alternativa (upsert nativo de Dataverse).
+ * `keyValue` no debe contener comillas simples sin escapar (OData: '' → ').
+ */
+export async function dvUpsert(entitySet: string, keyField: string, keyValue: string, body: object): Promise<void> {
+  const safeValue = keyValue.replace(/'/g, "''")
+  await dvFetch(`/${entitySet}(${keyField}='${safeValue}')`, { method: 'PATCH', body: JSON.stringify(body) })
+}

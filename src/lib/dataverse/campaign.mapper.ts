@@ -49,9 +49,15 @@ export function mapCampaignLevelFields(
   }
 }
 
+/** ID externo único por fila (campaña + fecha) — usado como clave alternativa cre47_campanaid para upsert idempotente. */
+export function idExterno(campaign: Campaign, fecha: string): string {
+  return `${campaign.id}-${fecha}`
+}
+
 /** Campos propios de una fecha de envío puntual (una fila = una fecha). */
 export function mapOcurrenciaFields(campaign: Campaign, fecha: string) {
   return {
+    cre47_campanaid: idExterno(campaign, fecha),
     cre47_nombredelacomunicacion: `${campaign.nombreCampana} (${fecha})`,
     cre47_fechasrecurrencia: fecha,
     cre47_fechayhoraprogramadaparaesteenvio: combinarFechaHora(fecha, campaign.horaEnvio),

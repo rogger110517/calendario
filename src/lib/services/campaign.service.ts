@@ -10,17 +10,13 @@ import dayjs from 'dayjs'
  * Best-effort: si falla (Dataverse mal configurado, sin credenciales
  * todavía, etc.) no interrumpe el flujo local — solo queda logueado.
  */
-async function syncCampaignToDataverse(campaign: Campaign): Promise<void> {
+async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'update'): Promise<void> {
   try {
-    const res = await fetch('/api/dataverse/sync-campaign', {
+    await fetch('/api/dataverse/sync-campaign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ campaign }),
+      body: JSON.stringify({ campaign, mode }),
     })
-    const { dataverseIds } = (await res.json()) as { dataverseIds: string[] }
-    if (dataverseIds?.length && !campaign.dataverseIds?.length) {
-      await CampaignRepository.update(campaign.id, { dataverseIds })
-    }
   } catch (err) {
     console.error('[Dataverse] sync falló', err)
   }
@@ -131,7 +127,7 @@ export const CampaignService = {
     }
     const campaign = await CampaignRepository.create(payload)
     await NotificationService.notificarNuevaCampana(campaign)
-    void syncCampaignToDataverse(campaign)
+    void syncCampaignToDataverse(campaign, 'create')
     return campaign
   },
 
@@ -140,7 +136,7 @@ export const CampaignService = {
     const campaign = await CampaignRepository.update(id, data)
     if (campaign && data.estado && data.estado !== anterior?.estado) {
       await NotificationService.notificarCambioEstado(campaign)
-      void syncCampaignToDataverse(campaign)
+      void syncCampaignToDataverse(campaign, 'update')
     }
     return campaign
   },
