@@ -1,9 +1,10 @@
 /**
  * Reconstruye Campaign[] a partir de las filas de cre47_comunicaciondecampana
  * en Dataverse — Dataverse es la fuente de verdad para lectura del
- * calendario (ver src/DESPLIEGUE_DATAVERSE.md sección 8). Cada Campaign
- * puede tener varias filas (una por fecha de envío); se agrupan por el
- * prefijo de campaignId en cre47_campanaid (`${campaignId}-${fecha}`).
+ * calendario (ver src/DESPLIEGUE_DATAVERSE.md sección 8). Cada Campaign es
+ * hoy exactamente 1 fila (1 campaña = 1 fecha de envío); se agrupa por el
+ * prefijo de campaignId en cre47_campanaid (`${campaignId}-${fecha}`) para
+ * seguir soportando filas legacy de antes de este cambio.
  */
 import { dvList } from './client'
 import { ESTADO_CAMPANA_REVERSE, TIPO_RECURRENCIA_REVERSE } from './campaign.options'
@@ -24,7 +25,6 @@ const CAMPOS = [
   'cre47_nombredelconcesionario',
   'cre47_cantidaddealers',
   'cre47_fechadeiniciodelacampana',
-  'cre47_fechadefindelacampana',
   'cre47_horadeenvio',
   'cre47_silacampanaesrecurrente',
   'cre47_tipoderecurrencia',
@@ -33,7 +33,6 @@ const CAMPOS = [
   'cre47_correodelsolicitante',
   'cre47_fechaderegistrodelacampana',
   'cre47_estadodelacampana',
-  'cre47_fechasrecurrencia',
 ]
 
 interface DvRow {
@@ -46,7 +45,6 @@ interface DvRow {
   cre47_nombredelconcesionario: string | null
   cre47_cantidaddealers: number | null
   cre47_fechadeiniciodelacampana: string
-  cre47_fechadefindelacampana: string
   cre47_horadeenvio: string
   cre47_silacampanaesrecurrente: boolean
   cre47_tipoderecurrencia: number | null
@@ -55,7 +53,6 @@ interface DvRow {
   cre47_correodelsolicitante: string | null
   cre47_fechaderegistrodelacampana: string
   cre47_estadodelacampana: number
-  cre47_fechasrecurrencia: string
 }
 
 /** Instante UTC (con Z) → fecha calendario de Lima "YYYY-MM-DD". Aritmética nativa, no depende del huso del servidor. */
@@ -96,9 +93,6 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
   for (const [campaignId, filas] of grupos) {
     const first = filas[0]
     const diaEnvio = utcAFechaLima(first.cre47_fechadeiniciodelacampana)
-    const fechasRecurrencia = [...new Set(filas.map((f) => utcAFechaLima(f.cre47_fechasrecurrencia)))]
-      .filter((f) => f !== diaEnvio)
-      .sort()
 
     const unidad = unidades.find((u) => u.nombre === first.cre47_unidaddenegocio)
     const dealer = dealers.find((d) => d.nombre === first.cre47_nombredelconcesionario)
@@ -114,12 +108,10 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
       cantidadDealers: first.cre47_cantidaddealers ?? undefined,
       diaEnvio,
       horaEnvio: utcAHoraLima(first.cre47_horadeenvio),
-      diaFin: utcAFechaLima(first.cre47_fechadefindelacampana),
       recurrencia: !!first.cre47_silacampanaesrecurrente,
       tipoRecurrencia: first.cre47_tipoderecurrencia != null
         ? TIPO_RECURRENCIA_REVERSE[first.cre47_tipoderecurrencia]
         : undefined,
-      fechasRecurrencia,
       linkOneDrive: first.cre47_urldelarchivoadjunto ?? undefined,
       comentarios: first.cre47_comentarios ?? undefined,
       // solicitante = correo directamente (Easy Auth, sin catálogo local de usuarios).

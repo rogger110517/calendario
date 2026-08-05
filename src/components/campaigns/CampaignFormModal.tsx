@@ -46,13 +46,10 @@ const schema = z.object({
   tipoRecurrencia: z.enum(['Diario', 'Semanal', 'Trimestral']).optional(),
   diaEnvio:        z.string().min(1, 'Fecha de envío requerida'),
   horaEnvio:       z.string().min(1, 'Hora de envío requerida'),
-  diaFin:          z.string().min(1, 'Fecha fin requerida'),
   linkOneDrive:    z.string().min(1, 'Campo requerido').url('Ingresa una URL válida de OneDrive'),
   comentarios:     z.string().optional(),
 }).refine((data) => !data.tieneRecurrencia || !!data.tipoRecurrencia, {
   message: 'Selecciona un tipo de recurrencia', path: ['tipoRecurrencia'],
-}).refine((data) => dayjs(data.diaFin).isSame(data.diaEnvio, 'day') || dayjs(data.diaFin).isAfter(data.diaEnvio, 'day'), {
-  message: 'La fecha fin debe ser igual o posterior al día de envío', path: ['diaFin'],
 })
 type FormValues = z.infer<typeof schema>
 
@@ -82,7 +79,6 @@ export function CampaignFormModal({ open, onClose }: Props) {
     tieneRecurrencia: false, tipoRecurrencia: undefined,
     diaEnvio:  newCampaignDate ?? dayjs().format('YYYY-MM-DD'),
     horaEnvio: '09:00',
-    diaFin:    newCampaignDate ?? dayjs().format('YYYY-MM-DD'),
     linkOneDrive: '', comentarios: '',
   }), [newCampaignDate, myUnidad])
 
@@ -353,6 +349,15 @@ export function CampaignFormModal({ open, onClose }: Props) {
                 )} />
               </Grid>
             )}
+            {tieneRecurrencia && (
+              <Grid size={12}>
+                <Alert severity="info" icon={false} sx={{ py: 0.5 }}>
+                  Este tipo de recurrencia solo identifica la periodicidad de la campaña.
+                  Igual tienes que registrar una campaña por cada fecha de envío que
+                  necesites — completa este formulario de nuevo para cada una.
+                </Alert>
+              </Grid>
+            )}
 
             {/* ── FECHAS Y HORA ── */}
             <Grid size={12}>
@@ -362,26 +367,19 @@ export function CampaignFormModal({ open, onClose }: Props) {
                 </Typography>
               </Divider>
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Controller name="diaEnvio" control={control} render={({ field }) => (
                 <TextField {...field} label="Día de Envío" type="date" fullWidth size="small" required
                   slotProps={{ inputLabel: { shrink: true } }}
                   error={!!errors.diaEnvio} helperText={errors.diaEnvio?.message} />
               )} />
             </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Controller name="horaEnvio" control={control} render={({ field }) => (
                 <TextField {...field} select label="Hora de Envío" fullWidth size="small" required
                   error={!!errors.horaEnvio} helperText={errors.horaEnvio?.message}>
                   {HORAS.map((h) => <MenuItem key={h} value={h}>{h}</MenuItem>)}
                 </TextField>
-              )} />
-            </Grid>
-            <Grid size={{ xs: 12, md: 4 }}>
-              <Controller name="diaFin" control={control} render={({ field }) => (
-                <TextField {...field} label="Fecha Fin" type="date" fullWidth size="small" required
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  error={!!errors.diaFin} helperText={errors.diaFin?.message} />
               )} />
             </Grid>
 

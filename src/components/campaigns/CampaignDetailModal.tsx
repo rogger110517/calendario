@@ -13,7 +13,6 @@ import PersonIcon        from '@mui/icons-material/Person'
 import RepeatIcon        from '@mui/icons-material/Repeat'
 import CheckCircleIcon   from '@mui/icons-material/CheckCircle'
 import ThumbDownIcon     from '@mui/icons-material/ThumbDown'
-import CancelIcon        from '@mui/icons-material/Cancel'
 import SendIcon          from '@mui/icons-material/Send'
 import LinkIcon          from '@mui/icons-material/Link'
 import BusinessIcon      from '@mui/icons-material/Business'
@@ -23,6 +22,7 @@ import { useCampaignStore } from '@/store/campaign.store'
 import { useCurrentUser }   from '@/components/auth/UserProvider'
 import { useUpdateCampaign, useDeleteCampaign } from '@/hooks/useCampaigns'
 import { useUnidades }       from '@/hooks/useUnidades'
+import { useDealers }        from '@/hooks/useDealers'
 import { useSnackbar } from 'notistack'
 import { ESTADO_COLORS }    from '@/components/calendar/CalendarView'
 import type { CampaignEstado } from '@/types'
@@ -51,12 +51,10 @@ const ACCIONES: Record<CampaignEstado, Accion[]> = {
   Pendiente: [
     { nuevoEstado: 'Aprobada',  label: 'Aprobar campaña',  icon: <CheckCircleIcon />, variant: 'contained', color: 'info',    needsConfirm: false },
     { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña?',         confirmMsg: 'La campaña será rechazada y desaparecerá del calendario.', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
-    { nuevoEstado: 'Cancelada', label: 'Cancelar',          icon: <CancelIcon />,     variant: 'outlined',  color: 'inherit', needsConfirm: true,  confirmTitle: '¿Cancelar campaña?',         confirmMsg: 'La campaña desaparecerá del calendario. Esta acción no se puede deshacer.', confirmLabel: 'Sí, cancelar', confirmColor: 'warning' },
   ],
   Aprobada: [
     { nuevoEstado: 'Ejecutada', label: 'Confirmar envío',   icon: <SendIcon />,       variant: 'contained', color: 'success', needsConfirm: false },
     { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña aprobada?', confirmMsg: 'La campaña será rechazada y desaparecerá del calendario.', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
-    { nuevoEstado: 'Cancelada', label: 'Cancelar',          icon: <CancelIcon />,     variant: 'outlined',  color: 'inherit', needsConfirm: true,  confirmTitle: '¿Cancelar campaña aprobada?', confirmMsg: 'La campaña ya fue aprobada. ¿Cancelar de todas formas?', confirmLabel: 'Sí, cancelar', confirmColor: 'warning' },
   ],
   Ejecutada: [], Rechazada: [], Cancelada: [],
 }
@@ -80,6 +78,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
   const updateCampaign = useUpdateCampaign()
   const deleteCampaign = useDeleteCampaign()
   const { data: unidades } = useUnidades()
+  const { data: dealers }  = useDealers()
   const { enqueueSnackbar } = useSnackbar()
   const [confirmOpen,       setConfirmOpen]       = useState(false)
   const [pendingAccion,     setPendingAccion]     = useState<Accion | null>(null)
@@ -91,6 +90,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
   const acciones = isAdmin ? ACCIONES[campaign.estado] : []
   const estado   = ESTADO_COLORS[campaign.estado]
   const unidad   = unidades?.find((u) => u.id === campaign.unidad)
+  const dealer   = dealers?.find((d) => d.id === campaign.dealer)
 
   const ejecutarCambio = async (accion: Accion) => {
     try {
@@ -236,7 +236,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
                 )}
 
                 {campaign.dealer && (
-                  <LabeledValue label="Dealer">{campaign.dealer}</LabeledValue>
+                  <LabeledValue label="Dealer">{dealer?.nombre ?? campaign.dealer}</LabeledValue>
                 )}
                 {campaign.dealer && campaign.cantidadDealers != null && (
                   <LabeledValue label="Cantidad de Dealers">{campaign.cantidadDealers}</LabeledValue>
@@ -253,9 +253,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
 
                 <Box display="flex" gap={1} alignItems="flex-start">
                   <CalendarTodayIcon fontSize="small" color="primary" sx={{ mt: 0.3 }} />
-                  <LabeledValue label="Período de Envío">
-                    {fmt(campaign.diaEnvio)} → {fmt(campaign.diaFin)}
-                  </LabeledValue>
+                  <LabeledValue label="Fecha de Envío">{fmt(campaign.diaEnvio)}</LabeledValue>
                 </Box>
 
                 <Box display="flex" gap={1} alignItems="flex-start">
@@ -263,20 +261,10 @@ export function CampaignDetailModal({ open, onClose }: Props) {
                   <LabeledValue label="Hora de Envío">{campaign.horaEnvio}</LabeledValue>
                 </Box>
 
-                {campaign.recurrencia && (campaign.fechasRecurrencia?.length ?? 0) > 0 && (
-                  <Box display="flex" gap={1} alignItems="flex-start">
-                    <RepeatIcon fontSize="small" color="primary" sx={{ mt: 0.3 }} />
-                    <Box>
-                      <Typography component="span" variant="caption" color="text.secondary" fontWeight={700} display="block"
-                        sx={{ textTransform: 'uppercase', letterSpacing: 0.4, fontSize: '0.67rem', mb: 0.5 }}>
-                        Fechas de Recurrencia
-                      </Typography>
-                      <Stack direction="row" spacing={0.75} flexWrap="wrap" useFlexGap>
-                        {campaign.fechasRecurrencia!.map((f) => (
-                          <Chip key={f} label={fmt(f)} size="small" variant="outlined" sx={{ fontWeight: 600 }} />
-                        ))}
-                      </Stack>
-                    </Box>
+                {campaign.recurrencia && campaign.tipoRecurrencia && (
+                  <Box display="flex" gap={1} alignItems="center">
+                    <RepeatIcon fontSize="small" color="primary" />
+                    <LabeledValue label="Recurrencia">{campaign.tipoRecurrencia}</LabeledValue>
                   </Box>
                 )}
 

@@ -129,21 +129,17 @@ export function CalendarView() {
   const events = (campaigns ?? [])
     .filter((c: Campaign) => !OCULTOS.includes(c.estado))
     .filter((c: Campaign) => !myUnidad || c.unidad === myUnidad)
-    .flatMap((c: Campaign) => {
+    .map((c: Campaign) => {
       const color = getUnidadColor(c.unidad)
-      // Un evento por cada fecha de envío: la fecha principal + las fechas de recurrencia calculadas
-      const fechas = c.recurrencia && c.fechasRecurrencia?.length
-        ? [c.diaEnvio, ...c.fechasRecurrencia]
-        : [c.diaEnvio]
-      return fechas.map((fecha, i) => ({
-        id:    `${c.id}::${i}`,
+      return {
+        id:    c.id,
         title: c.nombreCampana,
-        start: fecha,   // solo fecha inicial — sin end para que no coloree varios días
+        start: c.diaEnvio,   // una campaña = una fecha de envío = un evento
         backgroundColor: color,
         borderColor:     color,
         textColor:       '#fff',
         extendedProps:   { campaignId: c.id, estado: c.estado, unidad: c.unidad },
-      }))
+      }
     })
 
   // Datos de la unidad seleccionada para el Select

@@ -42,12 +42,10 @@ export interface Campaign {
   unidad: string                 // Unidad.id
   dealer: string | null          // Dealer.id o null
   cantidadDealers?: number       // cantidad de dealers incluidos en la campaña
-  diaEnvio: string               // ISO date
+  diaEnvio: string               // ISO date — única fecha de envío de esta campaña
   horaEnvio: string              // "HH:mm"
-  diaFin: string                 // ISO date
-  recurrencia: boolean
+  recurrencia: boolean           // solo informativo: marca que este envío es parte de una serie recurrente
   tipoRecurrencia?: TipoRecurrencia
-  fechasRecurrencia?: string[]   // fechas individuales ISO date[], calculadas según tipoRecurrencia
   linkOneDrive?: string          // URL de OneDrive (reemplaza archivo adjunto)
   comentarios?: string
   solicitante: string            // User.id
@@ -96,7 +94,6 @@ export interface CampaignFormData {
   cantidadDealers?: number
   diaEnvio: string
   horaEnvio: string
-  diaFin: string
   tieneRecurrencia: boolean
   tipoRecurrencia?: TipoRecurrencia
   linkOneDrive?: string

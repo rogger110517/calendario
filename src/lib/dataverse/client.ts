@@ -119,9 +119,21 @@ export async function dvDelete(entitySet: string, keyField: string, keyValue: st
   }
 }
 
-/** Lista filas de un entity set con $select opcional. */
-export async function dvList<T>(entitySet: string, select: string[]): Promise<T[]> {
-  const query = select.length ? `?$select=${select.join(',')}` : ''
+/** Borra una fila por su GUID real. No lanza si ya no existía (404). */
+export async function dvDeleteById(entitySet: string, id: string): Promise<void> {
+  try {
+    await dvFetch(`/${entitySet}(${id})`, { method: 'DELETE' })
+  } catch (err) {
+    if (!(err instanceof Error) || !err.message.includes('404')) throw err
+  }
+}
+
+/** Lista filas de un entity set con $select y $filter opcionales. */
+export async function dvList<T>(entitySet: string, select: string[], filter?: string): Promise<T[]> {
+  const params = new URLSearchParams()
+  if (select.length) params.set('$select', select.join(','))
+  if (filter) params.set('$filter', filter)
+  const query = params.toString() ? `?${params.toString()}` : ''
   const res = await dvFetch(`/${entitySet}${query}`, { method: 'GET' })
   const json = (await res.json()) as { value: T[] }
   return json.value

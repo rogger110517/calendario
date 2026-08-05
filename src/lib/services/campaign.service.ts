@@ -1,6 +1,6 @@
 import { CampaignRepository } from '@/lib/repositories/campaign.repository'
 import { CommunicationRepository } from '@/lib/repositories/communication.repository'
-import type { Campaign, CampaignFormData, TipoRecurrencia, User } from '@/types'
+import type { Campaign, CampaignFormData, User } from '@/types'
 import dayjs from 'dayjs'
 
 /**
@@ -39,26 +39,6 @@ async function fetchCampaignsReales(): Promise<Campaign[]> {
   const res = await fetch('/api/campaigns', { cache: 'no-store' })
   const json = (await res.json()) as { data: Campaign[]; success: boolean }
   return json.success ? json.data : []
-}
-
-// ── Cálculo de fechas de recurrencia ─────────────────────────────────────────
-const INTERVALO_RECURRENCIA: Record<TipoRecurrencia, [number, dayjs.ManipulateType]> = {
-  Diario:     [1, 'day'],
-  Semanal:    [1, 'week'],
-  Trimestral: [3, 'month'],
-}
-
-/** Calcula las fechas intermedias entre diaEnvio y diaFin según el tipo de recurrencia (excluye diaEnvio, incluye diaFin) */
-function calcularFechasRecurrencia(diaEnvio: string, diaFin: string, tipo: TipoRecurrencia): string[] {
-  const [cantidad, unidad] = INTERVALO_RECURRENCIA[tipo]
-  const fin = dayjs(diaFin)
-  const fechas: string[] = []
-  let cursor = dayjs(diaEnvio).add(cantidad, unidad)
-  while (cursor.isBefore(fin) || cursor.isSame(fin, 'day')) {
-    fechas.push(cursor.format('YYYY-MM-DD'))
-    cursor = cursor.add(cantidad, unidad)
-  }
-  return fechas
 }
 
 // ── Reglas de negocio ────────────────────────────────────────────────────────
@@ -120,10 +100,6 @@ export const CampaignService = {
   },
 
   async create(formData: CampaignFormData, currentUser: User): Promise<Campaign> {
-    const fechasRecurrencia = formData.tieneRecurrencia && formData.tipoRecurrencia
-      ? calcularFechasRecurrencia(formData.diaEnvio, formData.diaFin, formData.tipoRecurrencia)
-      : []
-
     const payload: Omit<Campaign, 'id'> = {
       nombreCampana:     formData.nombreCampana,
       subject:           formData.subject,
@@ -134,10 +110,8 @@ export const CampaignService = {
       cantidadDealers:   formData.tieneDealer ? formData.cantidadDealers : undefined,
       diaEnvio:          formData.diaEnvio,
       horaEnvio:         formData.horaEnvio,
-      diaFin:            formData.diaFin,
       recurrencia:       formData.tieneRecurrencia,
       tipoRecurrencia:   formData.tieneRecurrencia ? formData.tipoRecurrencia : undefined,
-      fechasRecurrencia,
       linkOneDrive:      formData.linkOneDrive ?? '',
       comentarios:       formData.comentarios,
       solicitante:       currentUser.correo,

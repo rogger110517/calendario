@@ -2,11 +2,10 @@
  * Mapea Campaign (src/types/index.ts) → columnas reales de
  * cre47_comunicaciondecampana en Dataverse QA.
  *
- * Diseño "una fila por fecha de envío": una Campaign recurrente genera
- * varias fechas (diaEnvio + fechasRecurrencia). Se crea una fila de
- * Dataverse por cada fecha, compartiendo los campos "de campaña" y
- * variando los campos "de ocurrencia" (fecha programada, canal, estado de
- * envío). Ver src/DESPLIEGUE_DATAVERSE.md.
+ * Cada Campaign tiene una única fecha de envío (diaEnvio) → una única fila
+ * en Dataverse. "recurrencia"/"tipoRecurrencia" son solo informativos: si
+ * el usuario necesita varias fechas, registra una campaña por cada una.
+ * Ver src/DESPLIEGUE_DATAVERSE.md.
  */
 import dayjs from 'dayjs'
 import type { Campaign, Dealer, Unidad } from '@/types'
@@ -34,7 +33,6 @@ export function mapCampaignLevelFields(
     cre47_codigodelconcesionario: dealer?.codigo ?? '',
     cre47_cantidaddealers: campaign.cantidadDealers ?? null,
     cre47_fechadeiniciodelacampana: limaAUtc(campaign.diaEnvio),
-    cre47_fechadefindelacampana: limaAUtc(campaign.diaFin),
     cre47_horadeenvio: limaAUtc(campaign.diaEnvio, campaign.horaEnvio),
     cre47_silacampanaesrecurrente: campaign.recurrencia,
     ...(campaign.tipoRecurrencia
@@ -71,9 +69,9 @@ export function mapOcurrenciaFields(campaign: Campaign, fecha: string) {
   }
 }
 
-/** Todas las fechas de envío de la campaña: diaEnvio + fechasRecurrencia. */
+/** La(s) fecha(s) de envío de la campaña — hoy siempre es una sola (diaEnvio). */
 export function fechasDeEnvio(campaign: Campaign): string[] {
-  return [campaign.diaEnvio, ...(campaign.recurrencia ? campaign.fechasRecurrencia ?? [] : [])]
+  return [campaign.diaEnvio]
 }
 
 /**
