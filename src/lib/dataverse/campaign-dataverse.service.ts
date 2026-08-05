@@ -21,15 +21,15 @@ export const CampaignDataverseService = {
   /**
    * Crea (o repone si ya existía) 1 fila por cada fecha de envío de la
    * campaña, vía upsert por cre47_campanaid (= campaignId + fecha, único
-   * por fila). Idempotente: reintentar no duplica filas. No lanza: si
-   * falla, solo loguea.
+   * por fila). Idempotente: reintentar no duplica filas. No lanza: devuelve
+   * `false` si falla (best-effort — no debe romper la creación local).
    *
    * Resguardo de "máximo 2 por día" del lado de Dataverse (además del
    * chequeo en el formulario): si ya hay 2 campañas activas ese día,
    * NO sincroniza — evita que una 3ra llegue a quedar registrada aunque
    * algo se haya colado del lado del cliente.
    */
-  async syncOnCreate(campaign: Campaign): Promise<void> {
+  async syncOnCreate(campaign: Campaign): Promise<boolean> {
     try {
       const existentes = await fetchCampaignsFromDataverse()
       const mismaFecha = existentes.filter(
@@ -40,7 +40,7 @@ export const CampaignDataverseService = {
         console.warn(
           `[Dataverse] Bloqueado: ya hay ${mismaFecha.length} campañas activas el ${campaign.diaEnvio}, no se registra "${campaign.nombreCampana}"`,
         )
-        return
+        return false
       }
 
       const fechas = fechasDeEnvio(campaign)
@@ -53,8 +53,10 @@ export const CampaignDataverseService = {
           }),
         ),
       )
+      return true
     } catch (err) {
       console.error('[Dataverse] No se pudo registrar la campaña', err)
+      return false
     }
   },
 
@@ -62,32 +64,37 @@ export const CampaignDataverseService = {
    * Actualiza SOLO los campos de campaña (ej. estado al aprobar/rechazar)
    * en todas las filas de esa campaña, vía upsert por la misma clave. No
    * toca los campos de ocurrencia (fecha, canal, estado de envío) — esos
-   * los administra el flujo de Power Automate. No lanza: solo loguea.
+   * los administra el flujo de Power Automate.
    */
-  async syncOnUpdate(campaign: Campaign): Promise<void> {
+  async syncOnUpdate(campaign: Campaign): Promise<boolean> {
     try {
       const fechas = fechasDeEnvio(campaign)
       const campaignFields = await resolveCampaignLevelFields(campaign, fechas.length)
       await Promise.all(
         fechas.map((fecha) => dvUpsert(ENTITY_SET, KEY_FIELD, idExterno(campaign, fecha), campaignFields)),
       )
+      return true
     } catch (err) {
       console.error('[Dataverse] No se pudo actualizar la campaña', err)
+      return false
     }
   },
 
   /**
    * Borra todas las filas de la campaña (una por fecha de envío). Como
    * Dataverse ahora es la fuente de verdad para lectura, si esto falla la
-   * campaña "eliminada" volvería a aparecer en el próximo refresh. No
-   * lanza: solo loguea.
+   * campaña "eliminada" volvería a aparecer en el próximo refresh — por
+   * eso acá SÍ importa devolver el resultado real (antes se tragaba el
+   * error y la app decía "eliminada" aunque no lo estuviera).
    */
-  async deleteCampaign(campaign: Campaign): Promise<void> {
+  async deleteCampaign(campaign: Campaign): Promise<boolean> {
     try {
       const fechas = fechasDeEnvio(campaign)
       await Promise.all(fechas.map((fecha) => dvDelete(ENTITY_SET, KEY_FIELD, idExterno(campaign, fecha))))
+      return true
     } catch (err) {
       console.error('[Dataverse] No se pudo eliminar la campaña', err)
+      return false
     }
   },
 }

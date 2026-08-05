@@ -10,17 +10,22 @@ import dayjs from 'dayjs'
  * Dataverse (ver src/DESPLIEGUE_DATAVERSE.md sección 8), hay que esperar a
  * que el sync termine antes de invalidar/refrescar la lista, si no el
  * refetch podría llegar antes de que el dato exista en Dataverse.
- * Best-effort igual: si falla, no interrumpe el flujo — solo queda logueado.
+ * Devuelve si realmente funcionó — antes se ignoraba el resultado y la UI
+ * mostraba éxito aunque el sync hubiera fallado (ej. al eliminar).
  */
-async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'update' | 'delete'): Promise<void> {
+async function syncCampaignToDataverse(campaign: Campaign, mode: 'create' | 'update' | 'delete'): Promise<boolean> {
   try {
-    await fetch('/api/dataverse/sync-campaign', {
+    const res = await fetch('/api/dataverse/sync-campaign', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ campaign, mode }),
+      cache: 'no-store',
     })
+    const json = (await res.json()) as { ok: boolean }
+    return json.ok
   } catch (err) {
     console.error('[Dataverse] sync falló', err)
+    return false
   }
 }
 
@@ -154,14 +159,16 @@ export const CampaignService = {
     const actualizada = { ...campaign, ...data }
     await CampaignRepository.update(campaign.id, data).catch(() => null) // best-effort, cache local
     if (data.estado && data.estado !== campaign.estado) {
-      await syncCampaignToDataverse(actualizada, 'update')
+      const ok = await syncCampaignToDataverse(actualizada, 'update')
+      if (!ok) throw new Error('No se pudo actualizar la campaña en Dataverse')
     }
     return actualizada
   },
 
   async delete(campaign: Campaign): Promise<boolean> {
     await CampaignRepository.delete(campaign.id).catch(() => false) // best-effort, cache local
-    await syncCampaignToDataverse(campaign, 'delete')
+    const ok = await syncCampaignToDataverse(campaign, 'delete')
+    if (!ok) throw new Error('No se pudo eliminar la campaña en Dataverse')
     return true
   },
 

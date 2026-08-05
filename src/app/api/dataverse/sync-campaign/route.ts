@@ -8,19 +8,24 @@ import type { Campaign } from '@/types'
  * hablarle a Dataverse directamente. El upsert por cre47_campanaid hace
  * innecesario rastrear GUIDs: "create" y "update" solo difieren en qué
  * campos se mandan (ver CampaignDataverseService).
+ *
+ * Devuelve el `ok` real de la operación — antes siempre devolvía
+ * `{ ok: true }` sin importar el resultado, así que un fallo (ej. al
+ * eliminar) quedaba invisible para el usuario.
  */
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   const { campaign, mode } = (await req.json()) as { campaign: Campaign; mode: 'create' | 'update' | 'delete' }
 
+  let ok: boolean
   if (mode === 'update') {
-    await CampaignDataverseService.syncOnUpdate(campaign)
+    ok = await CampaignDataverseService.syncOnUpdate(campaign)
   } else if (mode === 'delete') {
-    await CampaignDataverseService.deleteCampaign(campaign)
+    ok = await CampaignDataverseService.deleteCampaign(campaign)
   } else {
-    await CampaignDataverseService.syncOnCreate(campaign)
+    ok = await CampaignDataverseService.syncOnCreate(campaign)
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok })
 }
