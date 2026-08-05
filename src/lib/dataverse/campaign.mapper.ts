@@ -9,12 +9,15 @@
  */
 import dayjs from 'dayjs'
 import type { Campaign, Dealer, Unidad } from '@/types'
+import { getUserRole } from '@/lib/auth/roles'
 import {
   CANAL_ENVIO_OPTIONS,
   ESTADO_CAMPANA_OPTIONS,
   ESTADO_ENVIO_OPTIONS,
   TIPO_RECURRENCIA_OPTIONS,
 } from './campaign.options'
+
+const ROL_LABEL = { admin: 'Administrador', colaborador: 'Colaborador' } as const
 
 /** Campos que son iguales en todas las filas de una misma campaña. */
 export function mapCampaignLevelFields(
@@ -43,6 +46,9 @@ export function mapCampaignLevelFields(
     cre47_comentarios: campaign.comentarios ?? '',
     // campaign.solicitante ya es el correo (Easy Auth, sin catálogo local de usuarios).
     cre47_correodelsolicitante: campaign.solicitante,
+    // Rol del solicitante (Administrador/Colaborador) — mismo cálculo que
+    // usa la app para permisos, ver src/lib/auth/roles.ts.
+    cre47_tipodeusuario: ROL_LABEL[getUserRole(campaign.solicitante)],
     // fechaRegistro ya es un ISO datetime con offset real (dayjs().toISOString()
     // en campaign.service.ts) — no pasa por limaAUtc.
     cre47_fechaderegistrodelacampana: campaign.fechaRegistro,
