@@ -190,8 +190,7 @@ export function CalendarView() {
         </Box>
 
         {/* ── Mi Área (selector de unidad del usuario) ────────────────────── */}
-        <Tooltip title="Filtra el calendario por área — 'Todos' muestra todas las campañas">
-          <Select
+        <Select
             value={myUnidad}
             onChange={(e: SelectChangeEvent) => setMyUnidad(e.target.value)}
             size="small"
@@ -239,7 +238,6 @@ export function CalendarView() {
               </MenuItem>
             ))}
           </Select>
-        </Tooltip>
 
         {/* Título del período */}
         <Typography
