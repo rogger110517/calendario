@@ -124,9 +124,11 @@ export function CalendarView() {
   // El fondo del evento SIEMPRE es el color del área (campaign.unidad),
   // sin importar el estado. El estado se distingue solo por el círculo
   // (StatusDot, usa ESTADO_COLORS) dentro del evento.
-  // Todos son visibles — sin filtrado
+  // "Mi área" filtra el calendario: con un área elegida, solo se ven sus
+  // campañas; con "Todos" (myUnidad vacío) se ven todas.
   const events = (campaigns ?? [])
     .filter((c: Campaign) => !OCULTOS.includes(c.estado))
+    .filter((c: Campaign) => !myUnidad || c.unidad === myUnidad)
     .flatMap((c: Campaign) => {
       const color = getUnidadColor(c.unidad)
       // Un evento por cada fecha de envío: la fecha principal + las fechas de recurrencia calculadas
@@ -188,7 +190,7 @@ export function CalendarView() {
         </Box>
 
         {/* ── Mi Área (selector de unidad del usuario) ────────────────────── */}
-        <Tooltip title="Selecciona tu área — se usa para preseleccionarla al crear una campaña nueva">
+        <Tooltip title="Filtra el calendario por área — 'Todos' muestra todas las campañas">
           <Select
             value={myUnidad}
             onChange={(e: SelectChangeEvent) => setMyUnidad(e.target.value)}
