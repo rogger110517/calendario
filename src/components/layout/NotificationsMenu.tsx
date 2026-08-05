@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Menu, Box, Typography, Divider, Button, MenuItem,
   ListItemIcon, ListItemText,
@@ -9,11 +10,12 @@ import HourglassTopIcon    from '@mui/icons-material/HourglassTop'
 import CheckCircleIcon     from '@mui/icons-material/CheckCircle'
 import ThumbDownIcon       from '@mui/icons-material/ThumbDown'
 import SendIcon            from '@mui/icons-material/Send'
+import ListAltIcon         from '@mui/icons-material/ListAlt'
 import dayjs from 'dayjs'
 import { useCampaignStore } from '@/store/campaign.store'
 import { useCampaigns } from '@/hooks/useCampaigns'
 import {
-  useNotifications, useMarkNotificationRead, useMarkAllNotificationsRead,
+  useNotificationsPreview, useMarkNotificationRead, useMarkAllNotificationsRead,
 } from '@/hooks/useNotifications'
 import type { NotificationTipo } from '@/types'
 
@@ -27,7 +29,8 @@ const ICONO: Record<NotificationTipo, React.ReactNode> = {
 interface Props { anchorEl: HTMLElement | null; onClose: () => void }
 
 export function NotificationsMenu({ anchorEl, onClose }: Props) {
-  const { data: notifications } = useNotifications()
+  const router = useRouter()
+  const { data: notifications, total } = useNotificationsPreview()
   const { data: campaigns } = useCampaigns()
   const { setSelectedCampaign, setDetailOpen } = useCampaignStore()
   const markRead    = useMarkNotificationRead()
@@ -42,12 +45,17 @@ export function NotificationsMenu({ anchorEl, onClose }: Props) {
     onClose()
   }
 
+  const irAGeneral = () => {
+    onClose()
+    router.push('/notificaciones')
+  }
+
   return (
     <Menu
       anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={onClose}
       transformOrigin={{ horizontal: 'right', vertical: 'top' }}
       anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      slotProps={{ paper: { elevation: 3, sx: { mt: 0.5, width: 340, maxHeight: 420, borderRadius: 2 } } }}
+      slotProps={{ paper: { elevation: 3, sx: { mt: 0.5, width: 340, maxHeight: 460, borderRadius: 2, display: 'flex', flexDirection: 'column' } } }}
     >
       <Box sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="body2" fontWeight={700}>Notificaciones</Typography>
@@ -64,19 +72,29 @@ export function NotificationsMenu({ anchorEl, onClose }: Props) {
           <Typography variant="caption" color="text.secondary">Sin notificaciones</Typography>
         </Box>
       ) : (
-        lista.map((n) => (
-          <MenuItem key={n.id} onClick={() => handleClick(n.id, n.campaignId)}
-            sx={{ gap: 1.25, py: 1, alignItems: 'flex-start', bgcolor: n.leida ? 'transparent' : '#fff8f0', whiteSpace: 'normal' }}>
-            <ListItemIcon sx={{ mt: 0.25, minWidth: 28 }}>{ICONO[n.tipo]}</ListItemIcon>
-            <ListItemText
-              primary={n.mensaje}
-              secondary={dayjs(n.fecha).format('DD/MM/YYYY HH:mm')}
-              primaryTypographyProps={{ variant: 'body2', fontWeight: n.leida ? 400 : 700, sx: { lineHeight: 1.3 } }}
-              secondaryTypographyProps={{ variant: 'caption' }}
-            />
-          </MenuItem>
-        ))
+        <Box sx={{ overflowY: 'auto' }}>
+          {lista.map((n) => (
+            <MenuItem key={n.id} onClick={() => handleClick(n.id, n.campaignId)}
+              sx={{ gap: 1.25, py: 1, alignItems: 'flex-start', bgcolor: n.leida ? 'transparent' : '#fff8f0', whiteSpace: 'normal' }}>
+              <ListItemIcon sx={{ mt: 0.25, minWidth: 28 }}>{ICONO[n.tipo]}</ListItemIcon>
+              <ListItemText
+                primary={n.mensaje}
+                secondary={dayjs(n.fecha).format('DD/MM/YYYY HH:mm')}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: n.leida ? 400 : 700, sx: { lineHeight: 1.3 } }}
+                secondaryTypographyProps={{ variant: 'caption' }}
+              />
+            </MenuItem>
+          ))}
+        </Box>
       )}
+      <Divider />
+      <Box sx={{ px: 1, py: 0.75 }}>
+        <Button fullWidth size="small" startIcon={<ListAltIcon fontSize="small" />}
+          onClick={irAGeneral}
+          sx={{ textTransform: 'none', fontWeight: 700, fontSize: '0.78rem' }}>
+          Ver general{total > lista.length ? ` (${total})` : ''}
+        </Button>
+      </Box>
     </Menu>
   )
 }
