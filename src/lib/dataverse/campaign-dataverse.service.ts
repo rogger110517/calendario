@@ -1,4 +1,4 @@
-import { dvDeleteById, dvList, dvUpsert } from './client'
+import { dvUpsert } from './client'
 import { fechasDeEnvio, idExterno, mapCampaignLevelFields, mapOcurrenciaFields } from './campaign.mapper'
 import { fetchCampaignsFromDataverse } from './campaign-dataverse.reader'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
@@ -81,33 +81,15 @@ export const CampaignDataverseService = {
   },
 
   /**
-   * Borra TODAS las filas reales de la campaña. En vez de reconstruir la(s)
-   * clave(s) esperadas y borrar por ahí (frágil: si algo no calza exacto
-   * con lo guardado, el DELETE por clave alternativa no encuentra nada y
-   * no borra nada, sin avisar), consulta Dataverse por prefijo de
-   * cre47_campanaid y borra cada fila encontrada por su GUID real — así
-   * funciona sin importar si la reconstrucción de fecha/hora coincide
-   * exactamente, y de paso limpia filas legacy de antes de este cambio
-   * (cuando una campaña recurrente podía generar varias filas).
-   *
-   * Como Dataverse ahora es la fuente de verdad para lectura, si esto
-   * falla la campaña "eliminada" volvería a aparecer en el próximo
-   * refresh — por eso devuelve el resultado real (antes se tragaba el
-   * error y la app decía "eliminada" aunque no lo estuviera).
+   * "Elimina" la campaña = soft delete: actualiza cre47_estadodelacampana a
+   * Cancelada (333900004) en vez de borrar las filas. Antes hacía un DELETE
+   * físico (dvDeleteById) — la fila desaparecía sin pasar nunca por el
+   * estado Cancelada, así que el flujo de Power Automate que engancha sobre
+   * ese cambio de estado nunca hacía match. El calendario la sigue ocultando
+   * igual (Cancelada está en OCULTOS de CalendarView), solo cambia que en
+   * Dataverse queda el registro con el estado final en vez de desaparecer.
    */
   async deleteCampaign(campaign: Campaign): Promise<boolean> {
-    try {
-      const prefijo = campaign.id.replace(/'/g, "''")
-      const filas = await dvList<{ cre47_comunicaciondecampanaid: string }>(
-        ENTITY_SET,
-        ['cre47_comunicaciondecampanaid'],
-        `startswith(${KEY_FIELD},'${prefijo}-')`,
-      )
-      await Promise.all(filas.map((f) => dvDeleteById(ENTITY_SET, f.cre47_comunicaciondecampanaid)))
-      return true
-    } catch (err) {
-      console.error('[Dataverse] No se pudo eliminar la campaña', err)
-      return false
-    }
+    return CampaignDataverseService.syncOnUpdate({ ...campaign, estado: 'Cancelada' })
   },
 }

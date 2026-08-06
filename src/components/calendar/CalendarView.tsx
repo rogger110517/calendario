@@ -34,7 +34,11 @@ export const ESTADO_COLORS: Record<CampaignEstado, { bg: string; text: string; l
   Cancelada: { bg: '#9CA3AF', text: '#fff', label: 'Cancelada' },
 }
 
-const OCULTOS: CampaignEstado[] = ['Rechazada', 'Cancelada']
+// Cancelada se sigue ocultando del todo. Rechazada se muestra opaca (ver
+// clase .fc-event-rechazada más abajo) en vez de desaparecer — el usuario
+// pidió poder verla igual, y ya no cuenta para el máximo de 2/día (ver
+// campaign-dataverse.service.ts syncOnCreate).
+const OCULTOS: CampaignEstado[] = ['Cancelada']
 
 type ViewType = 'dayGridMonth' | 'timeGridWeek' | 'listMonth'
 const VIEW_LABELS: Record<ViewType, string> = {
@@ -138,6 +142,7 @@ export function CalendarView() {
         backgroundColor: color,
         borderColor:     color,
         textColor:       '#fff',
+        classNames:      c.estado === 'Rechazada' ? ['fc-event-rechazada'] : [],
         extendedProps:   { campaignId: c.id, estado: c.estado, unidad: c.unidad },
       }
     })
@@ -279,6 +284,9 @@ export function CalendarView() {
         },
         '& .fc-daygrid-day.fc-day-today': { background: '#fff3f4 !important' },
         '& .fc-event':     { cursor: 'pointer', borderRadius: '4px' },
+        // Rechazada: sigue visible y clickeable, pero opaca para distinguirla
+        // de las campañas activas sin ocultarla del todo.
+        '& .fc-event-rechazada': { opacity: 0.45 },
         '& .fc-more-link': { color: '#E40521', fontWeight: 600, fontSize: '0.75rem' },
       }}>
         <FullCalendar

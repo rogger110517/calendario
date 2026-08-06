@@ -50,11 +50,11 @@ type Accion = {
 const ACCIONES: Record<CampaignEstado, Accion[]> = {
   Pendiente: [
     { nuevoEstado: 'Aprobada',  label: 'Aprobar campaña',  icon: <CheckCircleIcon />, variant: 'contained', color: 'info',    needsConfirm: false },
-    { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña?',         confirmMsg: 'La campaña será rechazada y desaparecerá del calendario.', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
+    { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña?',         confirmMsg: 'La campaña quedará marcada como rechazada (se sigue viendo en el calendario, pero opaca).', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
   ],
   Aprobada: [
     { nuevoEstado: 'Ejecutada', label: 'Confirmar envío',   icon: <SendIcon />,       variant: 'contained', color: 'success', needsConfirm: false },
-    { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña aprobada?', confirmMsg: 'La campaña será rechazada y desaparecerá del calendario.', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
+    { nuevoEstado: 'Rechazada', label: 'Rechazar',          icon: <ThumbDownIcon />,  variant: 'outlined',  color: 'error',   needsConfirm: true,  confirmTitle: '¿Rechazar campaña aprobada?', confirmMsg: 'La campaña quedará marcada como rechazada (se sigue viendo en el calendario, pero opaca).', confirmLabel: 'Sí, rechazar',  confirmColor: 'error'   },
   ],
   Ejecutada: [], Rechazada: [], Cancelada: [],
 }
@@ -342,7 +342,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
       <ConfirmDialog
         open={deleteConfirmOpen}
         title="¿Eliminar campaña?"
-        message="Esta acción es irreversible: se borrará la campaña por completo, incluidas sus comunicaciones asociadas."
+        message="La campaña quedará marcada como cancelada y desaparecerá del calendario."
         confirmLabel="Sí, eliminar"
         confirmColor="error"
         onConfirm={handleEliminar}
