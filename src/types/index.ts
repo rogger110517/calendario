@@ -40,7 +40,7 @@ export interface Campaign {
   dirigidoA: string
   filtrosAplicar: string
   unidad: string                 // Unidad.id
-  dealer: string | null          // Dealer.id o null
+  dealers: string[]              // Dealer.id[] — vacío si no aplica
   cantidadDealers?: number       // cantidad de dealers incluidos en la campaña
   diaEnvio: string               // ISO date — única fecha de envío de esta campaña
   horaEnvio: string              // "HH:mm"
@@ -90,7 +90,7 @@ export interface CampaignFormData {
   filtrosAplicar: string
   unidad: string
   tieneDealer: boolean
-  dealer?: string
+  dealers?: string[]
   cantidadDealers?: number
   diaEnvio: string
   horaEnvio: string

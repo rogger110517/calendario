@@ -89,8 +89,8 @@ export function CampaignDetailModal({ open, onClose }: Props) {
   const isAdmin  = currentUser?.rol === 'admin'
   const acciones = isAdmin ? ACCIONES[campaign.estado] : []
   const estado   = ESTADO_COLORS[campaign.estado]
-  const unidad   = unidades?.find((u) => u.id === campaign.unidad)
-  const dealer   = dealers?.find((d) => d.id === campaign.dealer)
+  const unidad         = unidades?.find((u) => u.id === campaign.unidad)
+  const dealersCampana = (dealers ?? []).filter((d) => campaign.dealers.includes(d.id))
 
   const ejecutarCambio = async (accion: Accion) => {
     try {
@@ -235,10 +235,17 @@ export function CampaignDetailModal({ open, onClose }: Props) {
                   </Box>
                 )}
 
-                {campaign.dealer && (
-                  <LabeledValue label="Dealer">{dealer?.nombre ?? campaign.dealer}</LabeledValue>
+                {dealersCampana.length > 0 && (
+                  <LabeledValue label={`Dealers (${dealersCampana.length})`}>
+                    <Stack direction="row" flexWrap="wrap" useFlexGap gap={0.75}>
+                      {dealersCampana.map((d) => (
+                        <Chip key={d.id} size="small" variant="outlined" color="primary"
+                          label={`${d.nombre} · ${d.codigo}`} sx={{ fontWeight: 600 }} />
+                      ))}
+                    </Stack>
+                  </LabeledValue>
                 )}
-                {campaign.dealer && campaign.cantidadDealers != null && (
+                {dealersCampana.length > 0 && campaign.cantidadDealers != null && (
                   <LabeledValue label="Cantidad de Dealers">{campaign.cantidadDealers}</LabeledValue>
                 )}
                 {campaign.comentarios && (

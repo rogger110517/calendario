@@ -8,6 +8,7 @@
  */
 import { dvList } from './client'
 import { ESTADO_CAMPANA_REVERSE, TIPO_RECURRENCIA_REVERSE } from './campaign.options'
+import { SEPARADOR_DEALERS } from './campaign.mapper'
 import { UnidadRepository } from '@/lib/repositories/unidad.repository'
 import { DealerRepository } from '@/lib/repositories/dealer.repository'
 import type { Campaign } from '@/types'
@@ -95,7 +96,13 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
     const diaEnvio = utcAFechaLima(first.cre47_fechadeiniciodelacampana)
 
     const unidad = unidades.find((u) => u.nombre === first.cre47_unidaddenegocio)
-    const dealer = dealers.find((d) => d.nombre === first.cre47_nombredelconcesionario)
+    const nombresDealers = (first.cre47_nombredelconcesionario ?? '')
+      .split(SEPARADOR_DEALERS)
+      .map((n) => n.trim())
+      .filter(Boolean)
+    const dealersCampana = nombresDealers
+      .map((nombre) => dealers.find((d) => d.nombre === nombre)?.id)
+      .filter((id): id is string => !!id)
 
     campaigns.push({
       id: campaignId,
@@ -104,7 +111,7 @@ export async function fetchCampaignsFromDataverse(): Promise<Campaign[]> {
       dirigidoA: first.cre47_aquienvadirigido,
       filtrosAplicar: first.cre47_filtrosaaplicarsobrelabasedeclientes ?? '',
       unidad: unidad?.id ?? '',
-      dealer: dealer?.id ?? null,
+      dealers: dealersCampana,
       cantidadDealers: first.cre47_cantidaddealers ?? undefined,
       diaEnvio,
       horaEnvio: utcAHoraLima(first.cre47_horadeenvio),

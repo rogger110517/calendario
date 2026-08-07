@@ -19,10 +19,13 @@ import {
 
 const ROL_LABEL = { admin: 'Administrador', colaborador: 'Colaborador' } as const
 
+/** Separador usado para juntar varios dealers en una sola columna de texto de Dataverse. */
+export const SEPARADOR_DEALERS = ', '
+
 /** Campos que son iguales en todas las filas de una misma campaña. */
 export function mapCampaignLevelFields(
   campaign: Campaign,
-  dealer: Dealer | null,
+  dealers: Dealer[],
   unidad: Unidad | null,
   totalOcurrencias: number,
 ) {
@@ -32,8 +35,8 @@ export function mapCampaignLevelFields(
     cre47_aquienvadirigido: campaign.dirigidoA,
     cre47_filtrosaaplicarsobrelabasedeclientes: campaign.filtrosAplicar,
     cre47_unidaddenegocio: unidad?.nombre ?? '',
-    cre47_nombredelconcesionario: dealer?.nombre ?? '',
-    cre47_codigodelconcesionario: dealer?.codigo ?? '',
+    cre47_nombredelconcesionario: dealers.map((d) => d.nombre).join(SEPARADOR_DEALERS),
+    cre47_codigodelconcesionario: dealers.map((d) => d.codigo).join(SEPARADOR_DEALERS),
     cre47_cantidaddealers: campaign.cantidadDealers ?? null,
     cre47_fechadeiniciodelacampana: limaAUtc(campaign.diaEnvio),
     cre47_horadeenvio: limaAUtc(campaign.diaEnvio, campaign.horaEnvio),

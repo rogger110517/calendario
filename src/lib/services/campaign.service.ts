@@ -106,7 +106,7 @@ export const CampaignService = {
       dirigidoA:         formData.dirigidoA,
       filtrosAplicar:    formData.filtrosAplicar,
       unidad:            formData.unidad,
-      dealer:            formData.tieneDealer ? (formData.dealer ?? null) : null,
+      dealers:           formData.tieneDealer ? (formData.dealers ?? []) : [],
       cantidadDealers:   formData.tieneDealer ? formData.cantidadDealers : undefined,
       diaEnvio:          formData.diaEnvio,
       horaEnvio:         formData.horaEnvio,

@@ -10,11 +10,12 @@ const KEY_FIELD = 'cre47_campanaid'
 
 async function resolveCampaignLevelFields(campaign: Campaign, totalOcurrencias: number) {
   // campaign.solicitante ya es el correo (Easy Auth, no hay catálogo local de usuarios).
-  const [dealer, unidad] = await Promise.all([
-    campaign.dealer ? DealerRepository.findById(campaign.dealer) : Promise.resolve(null),
+  const [dealersEncontrados, unidad] = await Promise.all([
+    Promise.all(campaign.dealers.map((id) => DealerRepository.findById(id))),
     UnidadRepository.findById(campaign.unidad),
   ])
-  return mapCampaignLevelFields(campaign, dealer, unidad, totalOcurrencias)
+  const dealers = dealersEncontrados.filter((d): d is NonNullable<typeof d> => d != null)
+  return mapCampaignLevelFields(campaign, dealers, unidad, totalOcurrencias)
 }
 
 export const CampaignDataverseService = {

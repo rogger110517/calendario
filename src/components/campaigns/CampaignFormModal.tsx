@@ -5,8 +5,9 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Grid2 as Grid, Typography, Box,
   Divider, FormControlLabel, Checkbox, MenuItem,
-  CircularProgress, Alert, IconButton, Chip,
+  CircularProgress, Alert, IconButton, Chip, Autocomplete,
 } from '@mui/material'
+import StorefrontIcon    from '@mui/icons-material/Storefront'
 import CloseIcon        from '@mui/icons-material/Close'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import LinkIcon         from '@mui/icons-material/Link'
@@ -40,7 +41,7 @@ const schema = z.object({
   filtrosAplicar:  z.string().min(3, 'Campo requerido'),
   unidad:          z.string().min(1, 'Selecciona una unidad'),
   tieneDealer:     z.boolean(),
-  dealer:          z.string().optional(),
+  dealers:         z.array(z.string()).optional(),
   cantidadDealers: z.coerce.number().int().min(1, 'Mínimo 1').optional(),
   tieneRecurrencia: z.boolean(),
   tipoRecurrencia: z.enum(['Diario', 'Semanal', 'Trimestral']).optional(),
@@ -75,20 +76,25 @@ export function CampaignFormModal({ open, onClose }: Props) {
     nombreCampana: '', subject: '', dirigidoA: '', filtrosAplicar: '',
     // Pre-rellena la unidad con "Mi área" seleccionada en el calendario
     unidad: myUnidad ?? '',
-    tieneDealer: false, dealer: '', cantidadDealers: undefined,
+    tieneDealer: false, dealers: [], cantidadDealers: undefined,
     tieneRecurrencia: false, tipoRecurrencia: undefined,
     diaEnvio:  newCampaignDate ?? dayjs().format('YYYY-MM-DD'),
     horaEnvio: '09:00',
     linkOneDrive: '', comentarios: '',
   }), [newCampaignDate, myUnidad])
 
-  const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormValues>({
+  const { control, handleSubmit, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues,
   })
 
   const tieneDealer     = useWatch({ control, name: 'tieneDealer' })
   const tieneRecurrencia = useWatch({ control, name: 'tieneRecurrencia' })
+  const dealersElegidos  = useWatch({ control, name: 'dealers' }) ?? []
+  const dealersInfo = useMemo(
+    () => (dealers ?? []).filter((d) => dealersElegidos.includes(d.id)),
+    [dealers, dealersElegidos],
+  )
 
   useEffect(() => {
     if (open) {
@@ -295,25 +301,60 @@ export function CampaignFormModal({ open, onClose }: Props) {
               )} />
             </Grid>
             {tieneDealer && (
-              <Grid size={{ xs: 12, md: 5 }}>
-                <Controller name="dealer" control={control} render={({ field }) => (
-                  <TextField {...field} select label="Seleccionar Dealer" fullWidth size="small"
-                    error={!!errors.dealer} helperText={errors.dealer?.message}>
-                    <MenuItem value="">Seleccionar...</MenuItem>
-                    {(dealers ?? []).map((d) => (
-                      <MenuItem key={d.id} value={d.id}>
+              <Grid size={{ xs: 12, md: 8 }}>
+                <Controller name="dealers" control={control} render={({ field }) => (
+                  <Autocomplete
+                    multiple
+                    size="small"
+                    options={dealers ?? []}
+                    value={dealersInfo}
+                    onChange={(_, seleccionados) => field.onChange(seleccionados.map((d) => d.id))}
+                    getOptionLabel={(d) => d.nombre}
+                    isOptionEqualToValue={(a, b) => a.id === b.id}
+                    renderTags={() => null}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props} key={option.id}>
                         <Box>
-                          <Typography variant="body2" fontWeight={600}>{d.nombre}</Typography>
-                          <Typography variant="caption" color="text.secondary">{d.region} · {d.codigo}</Typography>
+                          <Typography variant="body2" fontWeight={600}>{option.nombre}</Typography>
+                          <Typography variant="caption" color="text.secondary">{option.codigo}</Typography>
                         </Box>
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                      </Box>
+                    )}
+                    renderInput={(params) => (
+                      <TextField {...params} label="Seleccionar Dealers"
+                        placeholder={dealersInfo.length ? 'Agregar otro...' : 'Buscar y seleccionar...'}
+                        error={!!errors.dealers} helperText={errors.dealers?.message} />
+                    )}
+                  />
                 )} />
               </Grid>
             )}
+            {tieneDealer && dealersInfo.length > 0 && (
+              <Grid size={12}>
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1,
+                  p: 1.5, bgcolor: '#fff3f4', borderRadius: 1.5, border: '1px dashed #E4052144',
+                }}>
+                  <Typography variant="caption" fontWeight={700} color="primary" sx={{ mr: 0.5, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                    Seleccionados ({dealersInfo.length})
+                  </Typography>
+                  {dealersInfo.map((d) => (
+                    <Chip
+                      key={d.id}
+                      size="small"
+                      icon={<StorefrontIcon sx={{ fontSize: '1rem' }} />}
+                      label={`${d.nombre} · ${d.codigo}`}
+                      color="primary"
+                      variant="outlined"
+                      onDelete={() => setValue('dealers', dealersElegidos.filter((id) => id !== d.id), { shouldValidate: true })}
+                      sx={{ fontWeight: 600, bgcolor: '#fff' }}
+                    />
+                  ))}
+                </Box>
+              </Grid>
+            )}
             {tieneDealer && (
-              <Grid size={{ xs: 12, md: 3 }}>
+              <Grid size={{ xs: 12, md: 4 }}>
                 <Controller name="cantidadDealers" control={control} render={({ field }) => (
                   <TextField {...field} value={field.value ?? ''} type="number" label="Cantidad de Dealers (opcional)" fullWidth size="small"
                     slotProps={{ htmlInput: { min: 1 } }}
