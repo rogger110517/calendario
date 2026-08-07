@@ -19,8 +19,15 @@ import {
 
 const ROL_LABEL = { admin: 'Administrador', colaborador: 'Colaborador' } as const
 
-/** Separador usado para juntar varios dealers en una sola columna de texto de Dataverse. */
-export const SEPARADOR_DEALERS = ', '
+/**
+ * Separador usado para juntar varios dealers en una sola columna de texto de
+ * Dataverse. ";" en vez de "," porque los nombres de dealer pueden traer
+ * comas propias (ej. razones sociales "S.A.C., ..."), lo que rompería un
+ * split por coma; ";" no aparece en ningún nombre de la lista y permite a
+ * Power Automate hacer split(cre47_nombredelconcesionario, ';') para saber
+ * exactamente cuántos dealers van y cuáles son.
+ */
+export const SEPARADOR_DEALERS = '; '
 
 /** Campos que son iguales en todas las filas de una misma campaña. */
 export function mapCampaignLevelFields(
