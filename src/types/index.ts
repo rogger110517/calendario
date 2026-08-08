@@ -31,7 +31,7 @@ export interface Dealer {
 
 // ─── Campaign ──────────────────────────────────────────────────────────────
 export type CampaignEstado = 'Pendiente' | 'Aprobada' | 'Rechazada' | 'Ejecutada' | 'Cancelada'
-export type TipoRecurrencia = 'Diario' | 'Semanal' | 'Trimestral'
+export type TipoRecurrencia = 'Diario' | 'Semanal' | 'Mensual' | 'Trimestral' | 'Anual'
 
 export interface Campaign {
   id: string

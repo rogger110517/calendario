@@ -24,7 +24,7 @@ import { useUnidades }       from '@/hooks/useUnidades'
 import type { CampaignFormData, TipoRecurrencia } from '@/types'
 import type { ReglaViolacion } from '@/lib/services/campaign.service'
 
-const TIPOS_RECURRENCIA: TipoRecurrencia[] = ['Diario', 'Semanal', 'Trimestral']
+const TIPOS_RECURRENCIA: TipoRecurrencia[] = ['Diario', 'Semanal', 'Mensual', 'Trimestral', 'Anual']
 
 // ── Horas de envío disponibles ────────────────────────────────────────────────
 const HORAS = Array.from({ length: 26 }, (_, i) => {
@@ -44,7 +44,7 @@ const schema = z.object({
   dealers:         z.array(z.string()).optional(),
   cantidadDealers: z.coerce.number().int().min(1, 'Mínimo 1').optional(),
   tieneRecurrencia: z.boolean(),
-  tipoRecurrencia: z.enum(['Diario', 'Semanal', 'Trimestral']).optional(),
+  tipoRecurrencia: z.enum(['Diario', 'Semanal', 'Mensual', 'Trimestral', 'Anual']).optional(),
   diaEnvio:        z.string().min(1, 'Fecha de envío requerida'),
   horaEnvio:       z.string().min(1, 'Hora de envío requerida'),
   linkOneDrive:    z.string().min(1, 'Campo requerido').url('Ingresa una URL válida de OneDrive'),

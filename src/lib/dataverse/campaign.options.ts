@@ -18,12 +18,12 @@ export const ESTADO_CAMPANA_OPTIONS: Record<CampaignEstado, number> = {
   Cancelada: 333900004,
 }
 
-// Dataverse tiene también Mensual (333900002) y Anual (333900004), pero
-// TipoRecurrencia en src/types/index.ts solo maneja estas 3.
 export const TIPO_RECURRENCIA_OPTIONS: Record<TipoRecurrencia, number> = {
   Diario: 333900000,
   Semanal: 333900001,
+  Mensual: 333900002,
   Trimestral: 333900003,
+  Anual: 333900004,
 }
 
 export const CANAL_ENVIO_OPTIONS: Record<CommunicationCanal, number> = {
