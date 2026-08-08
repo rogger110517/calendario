@@ -215,7 +215,8 @@ export function CampaignFormModal({ open, onClose }: Props) {
             <Alert severity="error" icon={<WarningAmberIcon />} sx={{ mb: 2 }}
               action={
                 !hayViolacionBloqueante && (
-                  <Button size="small" color="error" variant="outlined" onClick={handleForceCreate} disabled={isBusy}>
+                  <Button size="small" color="error" variant="outlined" onClick={handleForceCreate} disabled={isBusy}
+                    startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : null}>
                     Crear de todas formas
                   </Button>
                 )
@@ -231,7 +232,8 @@ export function CampaignFormModal({ open, onClose }: Props) {
           {similarWarning && !reglaViolaciones.length && (
             <Alert severity="warning" icon={<WarningAmberIcon />} sx={{ mb: 2 }}
               action={
-                <Button size="small" color="warning" variant="contained" onClick={handleForceCreate} disabled={isBusy}>
+                <Button size="small" color="warning" variant="contained" onClick={handleForceCreate} disabled={isBusy}
+                  startIcon={isBusy ? <CircularProgress size={14} color="inherit" /> : null}>
                   Continuar de todas formas
                 </Button>
               }>

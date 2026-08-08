@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, Box, Typography, Chip, Divider, Grid2 as Grid,
-  Stack, IconButton, Tooltip, Alert, Link,
+  Stack, IconButton, Tooltip, Alert, Link, CircularProgress,
 } from '@mui/material'
 import CloseIcon         from '@mui/icons-material/Close'
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
@@ -181,14 +181,17 @@ export function CampaignDetailModal({ open, onClose }: Props) {
             </Stack>
             {acciones.length > 0 ? (
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {acciones.map((accion) => (
-                  <Button key={accion.nuevoEstado} size="small" variant={accion.variant}
-                    color={accion.color as any} startIcon={accion.icon}
-                    disabled={updateCampaign.isPending} onClick={() => handleAccion(accion)}
-                    sx={{ fontWeight: 700, fontSize: '0.78rem' }}>
-                    {accion.label}
-                  </Button>
-                ))}
+                {acciones.map((accion) => {
+                  const enCurso = updateCampaign.isPending && updateCampaign.variables?.data?.estado === accion.nuevoEstado
+                  return (
+                    <Button key={accion.nuevoEstado} size="small" variant={accion.variant}
+                      color={accion.color as any} startIcon={enCurso ? <CircularProgress size={14} color="inherit" /> : accion.icon}
+                      disabled={updateCampaign.isPending} onClick={() => handleAccion(accion)}
+                      sx={{ fontWeight: 700, fontSize: '0.78rem' }}>
+                      {accion.label}
+                    </Button>
+                  )
+                })}
               </Stack>
             ) : (
               <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
@@ -196,7 +199,8 @@ export function CampaignDetailModal({ open, onClose }: Props) {
               </Typography>
             )}
             {puedeEliminar && (
-              <Button size="small" variant="text" color="error" startIcon={<DeleteOutlineIcon />}
+              <Button size="small" variant="text" color="error"
+                startIcon={deleteCampaign.isPending ? <CircularProgress size={14} color="inherit" /> : <DeleteOutlineIcon />}
                 disabled={deleteCampaign.isPending} onClick={() => setDeleteConfirmOpen(true)}
                 sx={{ fontWeight: 700, fontSize: '0.78rem', ml: 'auto' }}>
                 Eliminar
@@ -341,6 +345,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
           message={pendingAccion.confirmMsg!}
           confirmLabel={pendingAccion.confirmLabel}
           confirmColor={pendingAccion.confirmColor}
+          loading={updateCampaign.isPending}
           onConfirm={() => ejecutarCambio(pendingAccion)}
           onCancel={() => { setConfirmOpen(false); setPendingAccion(null) }}
         />
@@ -352,6 +357,7 @@ export function CampaignDetailModal({ open, onClose }: Props) {
         message="La campaña quedará marcada como cancelada y desaparecerá del calendario."
         confirmLabel="Sí, eliminar"
         confirmColor="error"
+        loading={deleteCampaign.isPending}
         onConfirm={handleEliminar}
         onCancel={() => setDeleteConfirmOpen(false)}
       />
