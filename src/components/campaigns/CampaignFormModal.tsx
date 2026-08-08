@@ -26,12 +26,12 @@ import type { ReglaViolacion } from '@/lib/services/campaign.service'
 
 const TIPOS_RECURRENCIA: TipoRecurrencia[] = ['Diario', 'Semanal', 'Mensual', 'Trimestral', 'Anual']
 
-// ── Horas de envío disponibles ────────────────────────────────────────────────
-const HORAS = Array.from({ length: 26 }, (_, i) => {
-  const h = Math.floor(i / 2) + 7
+// ── Horas de envío disponibles (24h) ──────────────────────────────────────────
+const HORAS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2)
   const m = i % 2 === 0 ? '00' : '30'
   return `${String(h).padStart(2, '0')}:${m}`
-}) // 07:00 → 19:30
+}) // 00:00 → 23:30
 
 // ── Schema de validación ──────────────────────────────────────────────────────
 const schema = z.object({
@@ -119,6 +119,17 @@ export function CampaignFormModal({ open, onClose }: Props) {
     onClose()
   }
 
+  // Al fallar la validación de zod, hace scroll suave hasta el primer campo
+  // marcado en rojo (si no, con el formulario largo el usuario no ve qué
+  // falta sin bajar a buscarlo a mano).
+  const onInvalid = (formErrors: typeof errors) => {
+    const primerCampo = Object.keys(formErrors)[0]
+    if (!primerCampo) return
+    const input = document.querySelector(`[name="${primerCampo}"]`)
+    const target = (input?.closest('.MuiFormControl-root') as HTMLElement | null) ?? input
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   const onSubmit = async (data: FormValues) => {
     setSimilarWarning(false)
     setReglaViolaciones([])
@@ -196,7 +207,7 @@ export function CampaignFormModal({ open, onClose }: Props) {
         </Box>
       </Box>
 
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <DialogContent sx={{ p: 3 }}>
 
           {/* Alertas de reglas de negocio */}
